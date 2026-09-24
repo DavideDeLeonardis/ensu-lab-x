@@ -4,16 +4,16 @@ Deterministic CO2 calculator for Lab X.
 This is the ONLY place kWh and kg CO2e numbers come from. The AI layer proposes
 changes; this module prices them. Reads data/equipment.csv and data/grid_intensity.csv.
 
-Library use:
-    from calculator import estimate, saving
+Library use (from the repo root):
+    from src.lab.calculator import estimate, saving
     estimate("CONF-1", "2026-10-16 12:00", "2026-10-16 16:00", warmup=False)
     saving("BK-098", new_start="2026-10-16 12:00", new_end="2026-10-16 16:00", warmup=False)
     saving("BK-078", cancel=True)           # e.g. cycle merged into another group's cycle
 
-CLI:
-    python3 calculator.py estimate CONF-1 "2026-10-16 12:00" "2026-10-16 16:00" --no-warmup
-    python3 calculator.py saving BK-098 "2026-10-16 12:00" "2026-10-16 16:00" --no-warmup
-    python3 calculator.py saving BK-078 --cancel
+CLI (from the repo root):
+    python3 src/lab/calculator.py estimate CONF-1 "2026-10-16 12:00" "2026-10-16 16:00" --no-warmup
+    python3 src/lab/calculator.py saving BK-098 "2026-10-16 12:00" "2026-10-16 16:00" --no-warmup
+    python3 src/lab/calculator.py saving BK-078 --cancel
 """
 
 import argparse
@@ -22,7 +22,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-DATA = Path(__file__).parent / "data"
+DATA = Path(__file__).resolve().parents[2] / "data"
 FMT = "%Y-%m-%d %H:%M"
 STEP = 0.25  # hours
 

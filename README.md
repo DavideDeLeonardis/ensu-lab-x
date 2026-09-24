@@ -10,31 +10,45 @@ We don't have access to real TU/e lab data, so this repo provides **Lab X**: a f
 culture lab modelled on the equipment of TU/e's
 [Laboratory for Cell & Tissue Engineering](https://www.tue.nl/en/research/research-labs/laboratory-for-cell-tissue-engineering).
 Equipment power figures come from published sources wherever possible; bookings and grid values are synthetic.
-This matches what we promised in Phase 1 (§3.2): prototype on published data, not live sensor feeds.
+This matches what we promised in Phase 1: prototype on published data, not live sensor feeds.
 
 ## Quick start
 ```bash
-open lab.html                      # interactive explorer: floor plan, calendar, grid curve, demo request
-python3 calculator.py estimate CONF-1 "2026-10-16 12:00" "2026-10-16 16:00"
-python3 calculator.py saving BK-098 "2026-10-16 12:00" "2026-10-16 16:00" --no-warmup
-python3 generate_lab.py            # regenerate data/ and lab.html after changing a value
-pip install jsonschema && python3 contract/validate.py contract/examples/A1_suggestion_set.json
+open explorer/lab.html                     # interactive explorer: floor plan, calendar, grid curve, demo request
+python3 src/lab/calculator.py estimate CONF-1 "2026-10-16 12:00" "2026-10-16 16:00"
+python3 src/lab/calculator.py saving BK-098 "2026-10-16 12:00" "2026-10-16 16:00" --no-warmup
+python3 src/lab/generate.py                # regenerate data/ and explorer/lab.html after changing a value
+pip install jsonschema && python3 src/contract/validate.py contract/examples/A1_suggestion_set.json
 ```
-No dependencies except Python 3.9+ (and `jsonschema` for the validator).
+Run everything from the repo root. No dependencies except Python 3.9+ (and `jsonschema` for the validator).
 
 ## What's in here
-| Path | What it is |
-|---|---|
-| `data/equipment.csv` | 16 devices: power/energy, uncertainty factors, **confidence**, source, basis of each value |
-| `data/bookings.csv` | 110 bookings, 5–18 Oct 2026, 3 research groups, with `movable` and `constraint` |
-| `data/scenario_request.csv` | **The demo case**: researcher A1's request for 12–16 Oct (10 bookings) |
-| `data/grid_intensity.csv` | Hourly grid carbon intensity, gCO₂e/kWh |
-| `data/sources.csv` | References |
-| `calculator.py` | The deterministic calculator. **All kg/kWh numbers come from here.** |
-| `CONTRACT.md` | **Read this if you work on the AI or the UI.** Formats, rules, feedback, metrics |
-| `contract/` | JSON schemas, worked examples, `validate.py` |
-| `lab.html` | Interactive view of the lab (built from `lab_template.html`) |
-| `generate_lab.py` | Generates everything from a fixed seed |
+```
+ensu-lab-x/
+├── README.md
+├── CONTRACT.md               ← read this if you work on the AI or the UI
+├── data/                     generated pseudo-lab data (don't edit by hand)
+│   ├── equipment.csv         16 devices: power/energy, uncertainty, confidence, source, basis
+│   ├── bookings.csv          110 bookings, 5–18 Oct 2026, 3 groups, with movable + constraint
+│   ├── scenario_request.csv  the demo case: researcher A1's request for 12–16 Oct
+│   ├── grid_intensity.csv    hourly gCO₂e/kWh
+│   ├── sources.csv
+│   └── lab_data.json         everything above in one file (used by the explorer)
+├── contract/                 the spec shared by AI and UI
+│   ├── schemas/              suggestion_set + feedback_event JSON schemas
+│   └── examples/             worked A1 output + feedback events (the gold set)
+├── src/
+│   ├── lab/
+│   │   ├── generate.py       builds data/ and explorer/lab.html from a fixed seed
+│   │   └── calculator.py     the deterministic calculator: all kg/kWh numbers come from here
+│   ├── contract/
+│   │   └── validate.py       checks AI output / feedback against schemas + rules
+│   ├── ai/                   AI team works here
+│   └── ui/                   UI team works here
+└── explorer/
+    ├── lab.html              interactive view of the lab
+    └── lab_template.html
+```
 
 ## The lab
 Five rooms: cell culture, cold storage, microscopy, tissue testing, prep & sterilisation. Three groups:
@@ -89,12 +103,7 @@ autonomy and hard constraints (Phase 1, §3.1), and says so openly.
 - TU/e (n.d.). *Laboratory for Cell & Tissue Engineering.* https://www.tue.nl/en/research/research-labs/laboratory-for-cell-tissue-engineering
 - TU/e (n.d.). *Lab Sustainability Pilot.* https://www.tue.nl/en/our-university/about-the-university/sustainability/sustainability-in-research/lab-sustainability-pilot
 
-### Method statement for the report
+
 > Equipment inventory modelled on a TU/e cell-culture lab; power figures from Tran et al. (2026) and
 > My Green Lab where available, team estimates otherwise (flagged per device); hourly grid intensity
 > shaped on Electricity Maps' 2025 review for the Netherlands; booking calendar synthetically generated.
-
-## Working together
-- `main` stays runnable. Work on a branch (`ai/...`, `ui/...`, `data/...`) and open a PR.
-- Changing a data value → edit `generate_lab.py`, rerun it, commit the regenerated files.
-- Changing the contract → see the last section of `CONTRACT.md`.

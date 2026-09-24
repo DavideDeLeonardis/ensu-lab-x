@@ -3,8 +3,8 @@ Check an AI output (SuggestionSet) or feedback events against the contract,
 plus the rules a schema cannot express.
 
     pip install jsonschema
-    python3 contract/validate.py contract/examples/A1_suggestion_set.json
-    python3 contract/validate.py contract/examples/feedback_events.json
+    python3 src/contract/validate.py contract/examples/A1_suggestion_set.json
+    python3 src/contract/validate.py contract/examples/feedback_events.json
 """
 import csv
 import json
@@ -13,8 +13,8 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-HERE = Path(__file__).parent
-ROOT = HERE.parent
+ROOT = Path(__file__).resolve().parents[2]
+SCHEMAS = ROOT / "contract" / "schemas"
 path = Path(sys.argv[1])
 doc = json.loads(path.read_text())
 
@@ -22,11 +22,11 @@ bookings = {r["booking_id"]: r for r in csv.DictReader(open(ROOT / "data" / "boo
 errors = []
 
 if isinstance(doc, list):  # feedback events
-    schema = json.loads((HERE / "feedback_event.schema.json").read_text())
+    schema = json.loads((SCHEMAS / "feedback_event.schema.json").read_text())
     for ev in doc:
         errors += [f"{ev.get('event_id')}: {e.message}" for e in Draft202012Validator(schema).iter_errors(ev)]
 else:
-    schema = json.loads((HERE / "suggestion_set.schema.json").read_text())
+    schema = json.loads((SCHEMAS / "suggestion_set.schema.json").read_text())
     errors += [e.message for e in Draft202012Validator(schema).iter_errors(doc)]
     sugg = doc.get("suggestions", [])
     # Rule: never touch a booking with movable = no

@@ -6,8 +6,8 @@ of TU/e's Laboratory for Cell & Tissue Engineering. Equipment power figures come
 from published sources where available (see `source` / `confidence` columns);
 the booking calendar and the hourly grid profile are synthetic.
 
-Run:  python3 generate_lab.py
-Out:  data/*.csv, lab_data.json, lab.html (built from lab_template.html)
+Run (from the repo root):  python3 src/lab/generate.py
+Out:  data/*.csv, data/lab_data.json, explorer/lab.html (built from explorer/lab_template.html)
 """
 
 import csv
@@ -20,8 +20,9 @@ from pathlib import Path
 SEED = 5  # 5ARF0
 random.seed(SEED)
 
-HERE = Path(__file__).parent
-DATA = HERE / "data"
+ROOT = Path(__file__).resolve().parents[2]
+DATA = ROOT / "data"
+EXPLORER = ROOT / "explorer"
 DATA.mkdir(exist_ok=True)
 
 EPOCH = datetime(2026, 10, 5)  # Monday; data covers 2 weeks (5-18 Oct 2026)
@@ -373,12 +374,12 @@ with open(DATA / "sources.csv", "w", newline="") as f:
 
 payload = dict(epoch=EPOCH.strftime("%Y-%m-%d"), days=DAYS, grid=grid, equipment=EQUIPMENT,
                rooms=ROOMS, groups=GROUPS, bookings=bookings, sources=SOURCES)
-(HERE / "lab_data.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
+(DATA / "lab_data.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
 
-tpl = HERE / "lab_template.html"
+tpl = EXPLORER / "lab_template.html"
 if tpl.exists():
     html = tpl.read_text().replace("/*__DATA__*/null", json.dumps(payload, ensure_ascii=False))
-    (HERE / "lab.html").write_text(html)
+    (EXPLORER / "lab.html").write_text(html)
 
 scen = [b for b in bookings if b["scenario"]]
 print(f"{len(bookings)} bookings ({len(scen)} in scenario), grid mean {sum(grid)/len(grid):.0f} g/kWh")

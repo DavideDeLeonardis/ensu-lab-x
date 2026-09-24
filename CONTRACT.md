@@ -4,7 +4,7 @@ This file is the agreement between the three parts of the prototype. If everyone
 exactly these formats, the pieces can be built in parallel and plugged together at the end.
 
 ```
- data/ (pseudo-lab)  ──►  calculator.py  ──►  AI layer  ──►  SuggestionSet (JSON)  ──►  UI
+ data/ (pseudo-lab)  ──►  src/lab/calculator.py  ──►  AI layer  ──►  SuggestionSet (JSON)  ──►  UI
                              ▲                                                          │
                              └──── prices every proposal                FeedbackEvent ◄─┘
 ```
@@ -12,9 +12,9 @@ exactly these formats, the pieces can be built in parallel and plugged together 
 | Part | Reads | Produces | Owner |
 |---|---|---|---|
 | Pseudo-lab | – | `data/*.csv` | Davide |
-| Calculator | `data/equipment.csv`, `data/grid_intensity.csv`, `data/bookings.csv` | kWh / kg CO₂e numbers | Davide |
-| AI layer | the request (`data/scenario_request.csv`) + all of `data/` + calculator | `SuggestionSet` | AI team |
-| UI | `SuggestionSet` | screens + `FeedbackEvent` | UI team |
+| Calculator (`src/lab/calculator.py`) | `data/equipment.csv`, `data/grid_intensity.csv`, `data/bookings.csv` | kWh / kg CO₂e numbers | Davide |
+| AI layer (`src/ai/`) | the request (`data/scenario_request.csv`) + all of `data/` + calculator | `SuggestionSet` | AI team |
+| UI (`src/ui/`) | `SuggestionSet` | screens + `FeedbackEvent` | UI team |
 
 ---
 
@@ -37,7 +37,7 @@ The researcher enters nothing beyond these booking fields (Phase 1, §2.2.4).
 
 ## 2. Output of the AI layer: `SuggestionSet`
 
-Schema: [`contract/suggestion_set.schema.json`](contract/suggestion_set.schema.json) ·
+Schema: [`contract/schemas/suggestion_set.schema.json`](contract/schemas/suggestion_set.schema.json) ·
 Worked example: [`contract/examples/A1_suggestion_set.json`](contract/examples/A1_suggestion_set.json)
 
 ```jsonc
@@ -80,12 +80,12 @@ Worked example: [`contract/examples/A1_suggestion_set.json`](contract/examples/A
 
 ## 3. Rules the AI layer must follow
 
-These come straight from our Phase 1 report. `contract/validate.py` checks the ones marked ✔.
+These come straight from our Phase 1 report. `src/contract/validate.py` checks rules 1 and 4 automatically.
 
-1. ✔ **Never touch a booking with `movable = no`.** List it under `suppressed` with `reason: hard_constraint`.
+1. **Never touch a booking with `movable = no`.** List it under `suppressed` with `reason: hard_constraint`.
 2. **Never change the experiment itself**: only time, unit, or batching. No "use fewer samples", no "skip a step".
 3. **Stay inside the `movable` window** (`within day`, `±1 day`, `within week`).
-4. ✔ **At most 3 suggestions, biggest saving first**: this limits alert fatigue.
+4. **At most 3 suggestions, biggest saving first**: this limits alert fatigue.
 5. **Numbers come from `calculator.py`, never from the LLM.** The LLM picks and explains; it does not invent kg.
 6. **Always give a range and a trade-off.** `tradeoff` is never empty.
 7. **Don't name other groups or researchers.** Say "another group", and set `needs_other_party: true`.
@@ -95,26 +95,19 @@ These come straight from our Phase 1 report. `contract/validate.py` checks the o
 `confidence` = the lowest confidence of the equipment values involved:
 `estimate` → `low`, `derived` → `medium`, `measured` → `high`.
 
-### Suggested pipeline (keeps the LLM honest)
-1. **Generate candidates in code**: for every movable booking, try the cleanest-grid slot in its window where the
-   unit is free; look for autoclave cycles on the same day with combined load ≤ 100%; look for confocal sessions
-   that can follow another one (no warm-up).
-2. **Price them** with `calculator.saving(...)`.
-3. **Filter** with rules 1, 3, 8, 9, and keep the top 3.
-4. **Ask the LLM** to fill `headline`, `why` and `tradeoff` only, given the numbers.
 
 A custom GPT / Claude Project with the CSVs uploaded is fine for the demo, **as long as** its prompt includes
-the rules above and it returns this exact JSON. Run `validate.py` on what it returns.
+the rules above and it returns this exact JSON. Run `python3 src/contract/validate.py <file>` on what it returns.
 
 ```python
-from calculator import saving
+from src.lab.calculator import saving   # run from the repo root
 saving("BK-098", new_start="2026-10-16 12:00", new_end="2026-10-16 16:00", warmup=False)
 saving("BK-078", cancel=True)   # merged into BK-075
 ```
 
 ## 4. What the UI sends back: `FeedbackEvent`
 
-Schema: [`contract/feedback_event.schema.json`](contract/feedback_event.schema.json) ·
+Schema: [`contract/schemas/feedback_event.schema.json`](contract/schemas/feedback_event.schema.json) ·
 Example: [`contract/examples/feedback_events.json`](contract/examples/feedback_events.json)
 
 ```json
@@ -144,7 +137,7 @@ Example: [`contract/examples/feedback_events.json`](contract/examples/feedback_e
 ## 6. How we evaluate outputs (for the coaching session and Phase 2)
 | Metric | How | Target |
 |---|---|---|
-| Constraint violations | `validate.py` over all AI outputs | 0 |
+| Constraint violations | `src/contract/validate.py` over all AI outputs | 0 |
 | Agreement with gold set | Compare AI output with `examples/A1_suggestion_set.json` (same bookings, same type) | ≥ 2 of 3 |
 | Numeric honesty | Every `saving_kg` matches `calculator.py` | 100% |
 | Acceptance / rejection rate | From `FeedbackEvent`s in a pilot | tracked, with reasons |
@@ -153,4 +146,4 @@ Example: [`contract/examples/feedback_events.json`](contract/examples/feedback_e
 
 ## Changing the contract
 Open a PR that edits the schema **and** the example **and** this file together, and tag the other two parts.
-`validate.py` must pass on the examples.
+`src/contract/validate.py` must pass on the examples.
