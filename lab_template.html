@@ -1,0 +1,431 @@
+<title>Lab X Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#EDF1F0; --surface:#FFFFFF; --sunk:#F5F8F7; --ink:#13201D; --muted:#5A6A66; --line:#D2DBD8;
+  --accent:#1E5BB8; --accent-soft:#DCE7F7;
+  --gA:#2A63C6; --gB:#8757B5; --gC:#B06B26;
+  --lo:#3C9468; --mid:#DDA93A; --hi:#C4473A;
+  --room:#F7FAF9; --room-line:#B9C6C2;
+  --shadow:0 1px 2px rgba(19,32,29,.06),0 4px 16px rgba(19,32,29,.05);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0E1513; --surface:#161F1D; --sunk:#1B2523; --ink:#E3ECE9; --muted:#95A6A1; --line:#2B3835;
+    --accent:#7AA7F0; --accent-soft:#1F3150;
+    --gA:#5B8EEA; --gB:#A884D6; --gC:#D08E4E;
+    --lo:#4FB07F; --mid:#E0B550; --hi:#E0685A;
+    --room:#131C1A; --room-line:#34433F;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1513; --surface:#161F1D; --sunk:#1B2523; --ink:#E3ECE9; --muted:#95A6A1; --line:#2B3835;
+  --accent:#7AA7F0; --accent-soft:#1F3150;
+  --gA:#5B8EEA; --gB:#A884D6; --gC:#D08E4E;
+  --lo:#4FB07F; --mid:#E0B550; --hi:#E0685A;
+  --room:#131C1A; --room-line:#34433F;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;margin:0}
+.wrap > *,.main > *{min-width:0}
+.wrap{grid-template-columns:minmax(0,1fr);max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:24px 48px;display:grid;gap:20px}
+h1,h2,h3{font-family:var(--cond);font-weight:600;margin:0;text-wrap:balance;letter-spacing:.005em}
+h1{font-size:28px;line-height:1.15}
+h2{font-size:19px}
+h3{font-size:15px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.eyebrow{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.top p{margin:6px 0 0;max-width:68ch;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:4px;background:var(--accent-soft);color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:7px 14px;cursor:pointer;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.phead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;padding:14px 16px 0}
+.pbody{padding:12px 16px 16px}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}.insp{position:static}}
+
+/* floor plan */
+.plan svg{width:100%;height:auto;display:block}
+.plan .room{fill:var(--room);stroke:var(--room-line);stroke-width:1.5}
+.plan .rname{font-family:var(--mono);font-size:12px;fill:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.tile{cursor:pointer}
+.tile rect.body{stroke:var(--line);stroke-width:1;fill:var(--surface)}
+.tile:hover rect.body,.tile.sel rect.body{stroke:var(--accent);stroke-width:2}
+.tile:focus{outline:none}
+.tile:focus-visible rect.body{stroke:var(--accent);stroke-width:2.5}
+.tile .tid{font-family:var(--mono);font-size:12px;font-weight:500;fill:var(--ink)}
+.tile .tname{font-size:11px;fill:var(--muted)}
+.tile .tval{font-family:var(--mono);font-size:11px;fill:var(--ink)}
+.tile .heat{stroke:none}
+.tile .pend{fill:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--muted);align-items:center}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.sw.pending{background:repeating-linear-gradient(135deg,var(--gA) 0 3px,transparent 3px 6px);outline:1.5px dashed var(--gA);outline-offset:-1.5px}
+.heatbar{display:inline-block;width:90px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--lo),var(--mid),var(--hi));vertical-align:0;margin:0 6px}
+
+/* inspector */
+.insp{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px)}
+.insp dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:12px 0 0;font-size:13px}
+.insp dt{color:var(--muted)}
+.insp dd{margin:0;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid currentColor;white-space:nowrap}
+.c-measured{color:var(--lo)} .c-derived{color:var(--accent)} .c-estimate{color:var(--mid)}
+.c-fixed{color:var(--hi)} .c-flex{color:var(--lo)}
+.note{margin-top:12px;padding:10px 12px;background:var(--sunk);border-radius:6px;font-size:12.5px;color:var(--muted)}
+.big{font-family:var(--cond);font-size:30px;font-weight:600;line-height:1.1}
+
+/* timeline */
+.tl-scroll{overflow-x:auto;border-top:1px solid var(--line)}
+.tl{position:relative;--ph:6px;width:calc(150px + 168 * var(--ph))}
+.tl-row{display:flex;height:34px;border-bottom:1px solid var(--line)}
+.tl-row.grid{height:40px}
+.tl-row.days{height:26px}
+.tl-label{position:sticky;left:0;z-index:2;width:150px;flex:none;background:var(--surface);padding:0 10px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid var(--line);font-size:12px;line-height:1.2}
+.tl-label .mono{font-size:11.5px;font-weight:500}
+.tl-label small{color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-track{position:relative;flex:none;width:calc(168 * var(--ph))}
+.dayline{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.dayname{position:absolute;top:5px;font-family:var(--mono);font-size:11px;color:var(--muted);padding-left:6px;white-space:nowrap}
+.dayname.we{color:var(--muted);opacity:.7}
+.gcell{position:absolute;bottom:0}
+.bar{position:absolute;border-radius:3px;cursor:pointer;border:0;padding:0;min-width:3px}
+.bar.A{background:var(--gA)} .bar.B{background:var(--gB)} .bar.C{background:var(--gC)}
+.bar.pending{background:repeating-linear-gradient(135deg,var(--gA) 0 3px,color-mix(in srgb,var(--gA) 25%,transparent) 3px 6px);outline:1.5px dashed var(--gA);outline-offset:-1.5px}
+.bar:hover,.bar.sel{box-shadow:0 0 0 2px var(--surface),0 0 0 3.5px var(--ink)}
+.now-note{font-size:12px;color:var(--muted)}
+
+/* scenario table */
+.tbl-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13px}
+th{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;font-weight:500;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr.clk{cursor:pointer}
+tr.clk:hover td{background:var(--sunk)}
+.share{display:flex;align-items:center;gap:8px}
+.share i{display:block;height:8px;border-radius:2px;background:var(--gA);min-width:2px}
+.totals{display:flex;flex-wrap:wrap;gap:12px 36px;padding:14px 16px;border-top:1px solid var(--line);align-items:baseline}
+.totals div{display:grid;gap:2px}
+
+.foot{font-size:12.5px;color:var(--muted);display:grid;gap:10px}
+.foot ol{margin:0;padding-left:18px;display:grid;gap:4px}
+.foot a{color:var(--accent);word-break:break-word}
+@media (prefers-reduced-motion:no-preference){.bar,.tile rect.body{transition:box-shadow .12s,stroke .12s}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">ENSU prototype · pseudo-lab</div>
+      <h1>Lab X — Cell &amp; Tissue Culture</h1>
+      <p>A fictional lab modelled on the equipment of TU/e's Laboratory for Cell &amp; Tissue Engineering, used to test the booking-time CO₂ estimator. Power figures come from published sources where available; bookings and the grid profile are synthetic.</p>
+    </div>
+    <div style="display:grid;gap:8px;justify-items:end">
+      <span class="badge">Synthetic data</span>
+      <div class="seg" role="group" aria-label="Week">
+        <button type="button" id="wk0" aria-pressed="true">5–11 Oct</button>
+        <button type="button" id="wk1" aria-pressed="false">12–18 Oct</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <section class="panel plan" aria-labelledby="plan-h">
+      <div class="phead">
+        <h2 id="plan-h">Floor plan</h2>
+        <div class="legend"><span>Weekly CO₂e</span><span class="heatbar"></span><span class="mono" id="plan-max"></span><span><span class="sw" style="background:var(--accent);border-radius:50%"></span>in A1's pending request</span></div>
+      </div>
+      <div class="pbody"><svg id="plan" viewBox="0 0 1000 540" role="img" aria-label="Floor plan of Lab X with equipment"></svg></div>
+    </section>
+
+    <aside class="panel insp" id="insp" aria-live="polite"></aside>
+  </div>
+
+  <section class="panel" aria-labelledby="tl-h">
+    <div class="phead">
+      <h2 id="tl-h">Bookings &amp; grid intensity</h2>
+      <div class="legend">
+        <span><span class="sw" style="background:var(--gA)"></span>Heart valve TE</span>
+        <span><span class="sw" style="background:var(--gB)"></span>Cartilage &amp; disc</span>
+        <span><span class="sw" style="background:var(--gC)"></span>Vascular grafts</span>
+        <span><span class="sw pending"></span>Pending request (A1)</span>
+        <span>Grid <span class="heatbar"></span><span class="mono" id="grid-range"></span></span>
+      </div>
+    </div>
+    <div class="pbody" style="padding-bottom:10px"><span class="now-note">Select a booking to see its estimate. Hover a grid cell for gCO₂e/kWh. Scroll sideways on small screens.</span></div>
+    <div class="tl-scroll"><div class="tl" id="tl"></div></div>
+  </section>
+
+  <section class="panel" aria-labelledby="sc-h">
+    <div class="phead">
+      <h2 id="sc-h">Scenario: A1's booking request, 12–16 Oct</h2>
+      <span class="muted" style="font-size:12.5px">What the researcher submits. The tool reads these fields only — no extra input.</span>
+    </div>
+    <div class="pbody tbl-scroll">
+      <table>
+        <thead><tr><th>Equipment</th><th>When</th><th>Purpose</th><th>Flexibility</th><th class="num">kWh</th><th class="num">kg CO₂e (range)</th><th>Share</th></tr></thead>
+        <tbody id="sc-body"></tbody>
+      </table>
+    </div>
+    <div class="totals" id="sc-tot"></div>
+  </section>
+
+  <footer class="foot">
+    <div><strong style="color:var(--ink)">Method.</strong> Estimate per booking = Σ over 15-min steps of (equipment power × grid intensity at that hour). Confocal sessions include a 30-min laser warm-up; autoclave cycles count 6 kWh regardless of load; incubator shelves carry a pro-rata share of the unit's daily energy. The range applies each device's low/high factor. Always-on devices (freezers, heat block, water bath) are shown on the plan but are not booked. Researcher IDs are pseudonyms.</div>
+    <div><strong style="color:var(--ink)">Grid profile.</strong> Synthetic hourly curve shaped on Electricity Maps' 2025 review for the Netherlands (annual mean 262 g/kWh, midday solar trough, evening peak near 20:00). Replace with a real hourly export before the final demo.</div>
+    <ol id="src"></ol>
+  </footer>
+</div>
+
+<script>
+const D = /*__DATA__*/null;
+const EQ = Object.fromEntries(D.equipment.map(e => [e.id, e]));
+const GROUP = Object.fromEntries(D.groups.map(g => [g.id, g]));
+const ROOM = Object.fromEntries(D.rooms.map(r => [r.id, r]));
+const DAYN = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+let week = 0, selEq = null, selBk = null;
+try { const w = localStorage.getItem("labx-week"); if (w === "1") week = 1; } catch (e) {}
+
+const $ = s => document.querySelector(s);
+const fmt = (n, d = 1) => Number(n).toLocaleString("en-GB", {minimumFractionDigits: d, maximumFractionDigits: d});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function when(h) { const d = Math.floor(h / 24), hh = h - d * 24; const date = 5 + d;
+  return `${DAYN[d % 7]} ${date} Oct ${String(Math.floor(hh)).padStart(2,"0")}:${String(Math.round((hh % 1) * 60)).padStart(2,"0")}`; }
+function span(b) { const s = when(b.start_h), e = when(b.end_h);
+  return s.slice(0, s.lastIndexOf(" ")) === e.slice(0, e.lastIndexOf(" ")) ? `${s}–${e.slice(e.lastIndexOf(" ") + 1)}` : `${s} → ${e}`; }
+
+// colour scale on grid intensity (and reused for heat)
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hex(c) { c = c.replace("#", ""); return [0, 2, 4].map(i => parseInt(c.slice(i, i + 2), 16)); }
+function mix(a, b, t) { return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`; }
+function ramp(t) { t = Math.max(0, Math.min(1, t)); const lo = hex(css("--lo")), mid = hex(css("--mid")), hi = hex(css("--hi"));
+  return t < .5 ? mix(lo, mid, t * 2) : mix(mid, hi, (t - .5) * 2); }
+const GMIN = Math.min(...D.grid), GMAX = Math.max(...D.grid);
+
+// week helpers
+const wS = () => week * 168, wE = () => week * 168 + 168;
+const inWeek = b => b.end_h > wS() && b.start_h < wE();
+function weekShare(b) { const tot = b.end_h - b.start_h; if (tot <= 0) return 0;
+  return (Math.min(b.end_h, wE()) - Math.max(b.start_h, wS())) / tot; }
+function weekStats(id) {
+  const e = EQ[id];
+  if (e.mode === "continuous") { let kwh = e.kwh_per_day * 7, kg = 0;
+    for (let h = wS(); h < wE(); h++) kg += e.kwh_per_day / 24 * D.grid[h] / 1000;
+    return {kwh, kg, n: 0}; }
+  let kwh = 0, kg = 0, n = 0;
+  D.bookings.filter(b => b.equipment_id === id && inWeek(b)).forEach(b => { const f = weekShare(b); kwh += b.kwh * f; kg += b.kg_typ * f; n++; });
+  return {kwh, kg, n};
+}
+
+// ---------- floor plan ----------
+const LAYOUT = {
+  culture: {x: 0, y: 0, w: 590, h: 330, cols: 4},
+  micro:   {x: 600, y: 0, w: 400, h: 190, cols: 2},
+  testing: {x: 600, y: 200, w: 400, h: 130, cols: 2},
+  cold:    {x: 0, y: 340, w: 290, h: 200, cols: 2},
+  prep:    {x: 300, y: 340, w: 700, h: 200, cols: 4},
+};
+function drawPlan() {
+  const svg = $("#plan"); const ns = "http://www.w3.org/2000/svg"; svg.innerHTML = "";
+  const stats = Object.fromEntries(D.equipment.map(e => [e.id, weekStats(e.id)]));
+  const maxKg = Math.max(...Object.values(stats).map(s => s.kg));
+  $("#plan-max").textContent = `0–${fmt(maxKg, 0)} kg`;
+  const pend = new Set(D.bookings.filter(b => b.scenario && inWeek(b)).map(b => b.equipment_id));
+  for (const [rid, L] of Object.entries(LAYOUT)) {
+    const g = document.createElementNS(ns, "g");
+    g.innerHTML = `<rect class="room" x="${L.x + 1}" y="${L.y + 1}" width="${L.w - 2}" height="${L.h - 2}" rx="6"/>
+      <text class="rname" x="${L.x + 14}" y="${L.y + 24}">${esc(ROOM[rid].name)}</text>`;
+    svg.appendChild(g);
+    const items = D.equipment.filter(e => e.room === rid);
+    const tw = 128, th = 70, gx = 12, gy = 12;
+    items.forEach((e, i) => {
+      const c = i % L.cols, r = Math.floor(i / L.cols);
+      const x = L.x + 14 + c * (tw + gx), y = L.y + 38 + r * (th + gy);
+      const s = stats[e.id]; const t = s.kg / maxKg;
+      const tile = document.createElementNS(ns, "g");
+      tile.setAttribute("class", "tile" + (selEq === e.id ? " sel" : ""));
+      tile.setAttribute("tabindex", "0"); tile.setAttribute("role", "button");
+      tile.setAttribute("aria-label", `${e.id} ${e.name}, ${fmt(s.kg)} kg CO2e this week`);
+      const short = e.name.replace(/\s*\(.*\)/, "");
+      tile.innerHTML = `<rect class="body" x="${x}" y="${y}" width="${tw}" height="${th}" rx="5"/>
+        <rect class="heat" x="${x + 1}" y="${y + th - 7}" width="${Math.max(3, (tw - 2) * t)}" height="6" rx="2" fill="${ramp(t)}"/>
+        <text class="tid" x="${x + 10}" y="${y + 20}">${e.id}</text>
+        ${pend.has(e.id) ? `<circle class="pend" cx="${x + tw - 12}" cy="${y + 15}" r="5"/>` : ""}
+        <text class="tname" x="${x + 10}" y="${y + 37}">${esc(short.length > 20 ? short.slice(0, 19) + "…" : short)}</text>
+        <text class="tval" x="${x + 10}" y="${y + 54}">${fmt(s.kg)} kg · ${fmt(s.kwh, 0)} kWh</text>`;
+      const pick = () => { selEq = e.id; selBk = null; render(); };
+      tile.addEventListener("click", pick);
+      tile.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } });
+      svg.appendChild(tile);
+    });
+  }
+}
+
+// ---------- inspector ----------
+function confChip(c) { return `<span class="chip c-${c}">${c}</span>`; }
+function flexChip(m) { return m === "no" ? `<span class="chip c-fixed">fixed</span>` : `<span class="chip c-flex">${esc(m)}</span>`; }
+function drawInspector() {
+  const el = $("#insp");
+  if (selBk) {
+    const b = D.bookings.find(x => x.booking_id === selBk), e = EQ[b.equipment_id];
+    const avgG = b.kwh ? b.kg_typ / b.kwh * 1000 : 0;
+    el.innerHTML = `<div class="phead"><div><div class="eyebrow">${b.booking_id}${b.scenario ? " · pending request" : ""}</div><h2>${esc(e.name)}</h2></div></div>
+      <div class="pbody">
+        <div class="big mono">${fmt(b.kg_typ, 2)} <span style="font-size:15px" class="muted">kg CO₂e</span></div>
+        <div class="muted mono" style="font-size:12px">range ${fmt(b.kg_low, 2)}–${fmt(b.kg_high, 2)} kg</div>
+        <dl>
+          <dt>When</dt><dd>${span(b)}</dd>
+          <dt>Group</dt><dd>${esc(GROUP[b.group].name)} <span class="muted">(${b.researcher})</span></dd>
+          <dt>Purpose</dt><dd>${esc(b.purpose)}</dd>
+          <dt>Energy</dt><dd class="mono">${fmt(b.kwh, 2)} kWh</dd>
+          <dt>Avg grid</dt><dd class="mono">${fmt(avgG, 0)} g/kWh</dd>
+          ${b.load_pct !== "" ? `<dt>Load</dt><dd class="mono">${b.load_pct}%</dd>` : ""}
+          ${b.shelves !== "" ? `<dt>Shelves</dt><dd class="mono">${b.shelves} of ${e.shelves}</dd>` : ""}
+          <dt>Flexibility</dt><dd>${flexChip(b.movable)}</dd>
+        </dl>
+        ${b.constraint ? `<div class="note"><strong>Hard constraint:</strong> ${esc(b.constraint)}. The tool must not suggest changes here.</div>` : ""}
+        ${b.scenario && b.end_h >= D.days * 24 ? `<div class="note">The culture continues past 18 Oct; only the part inside the data window is counted.</div>` : ""}
+      </div>`;
+    return;
+  }
+  if (selEq) {
+    const e = EQ[selEq], s = weekStats(selEq);
+    const power = e.mode === "hourly" ? `${fmt(e.active_kw, 2)} kW in use${e.idle_kw ? `, ${fmt(e.idle_kw, 2)} kW idle` : ""}`
+      : e.mode === "cycle" ? `${fmt(e.kwh_per_cycle, 1)} kWh per cycle; jacket standby ${fmt(e.idle_kw, 2)} kW`
+      : e.mode === "shelf" ? `${fmt(e.kwh_per_day, 2)} kWh/day, ${e.shelves} shelves` : `${fmt(e.kwh_per_day, 2)} kWh/day`;
+    const extra = e.id === "AUT-1" ? `<div class="note">If the jacket stays on around the clock, standby alone is ≈${fmt(e.idle_kw * 168, 0)} kWh/week. Grouping cycles lets it be switched off earlier.</div>`
+      : e.id.startsWith("ULT") ? `<div class="note">Raising the set-point from −80 °C to −70 °C cuts use by ~30–35% (Tran et al., 2026; My Green Lab). This is a lab-manager decision, not a booking one.</div>`
+      : e.warmup_min ? `<div class="note">Each session adds a ${e.warmup_min}-min laser warm-up. Back-to-back sessions can share it.</div>` : "";
+    el.innerHTML = `<div class="phead"><div><div class="eyebrow">${e.id} · ${esc(e.category)}</div><h2>${esc(e.name)}</h2></div></div>
+      <div class="pbody">
+        <div class="big mono">${fmt(s.kg)} <span style="font-size:15px" class="muted">kg CO₂e this week</span></div>
+        <div class="muted mono" style="font-size:12px">${fmt(s.kwh, 1)} kWh${e.mode === "continuous" ? " · always on" : ` · ${s.n} booking${s.n === 1 ? "" : "s"}`}</div>
+        <dl>
+          <dt>Room</dt><dd>${esc(ROOM[e.room].name)}</dd>
+          <dt>Power</dt><dd>${power}</dd>
+          <dt>Confidence</dt><dd>${confChip(e.confidence)}</dd>
+          <dt>Basis</dt><dd>${esc(e.basis)}</dd>
+          <dt>Source</dt><dd>${esc(D.sources[e.source].split(". ")[0])}${e.source === "ASSUMED" ? "" : ` (${esc((D.sources[e.source].match(/\((\d{4}|n\.d\.)\)/) || ["", ""])[1])})`}</dd>
+          <dt>Shareable</dt><dd>${e.shareable ? "yes" : "no"}</dd>
+        </dl>${extra}
+      </div>`;
+    return;
+  }
+  const scen = D.bookings.filter(b => b.scenario);
+  const tot = scen.reduce((a, b) => a + b.kg_typ, 0);
+  const g = D.grid.slice(wS(), wE()); const mean = g.reduce((a, b) => a + b, 0) / g.length;
+  el.innerHTML = `<div class="phead"><div><div class="eyebrow">Overview · week of ${week ? "12" : "5"} Oct</div><h2>How to read this lab</h2></div></div>
+    <div class="pbody">
+      <dl>
+        <dt>Equipment</dt><dd>${D.equipment.length} devices in 5 rooms</dd>
+        <dt>Groups</dt><dd>${D.groups.map(x => esc(x.name)).join(", ")}</dd>
+        <dt>Bookings</dt><dd class="mono">${D.bookings.filter(inWeek).length} this week</dd>
+        <dt>Grid mean</dt><dd class="mono">${fmt(mean, 0)} g/kWh</dd>
+        <dt>Grid range</dt><dd class="mono">${fmt(Math.min(...g), 0)}–${fmt(Math.max(...g), 0)} g/kWh</dd>
+        <dt>A1's request</dt><dd class="mono">≈${fmt(tot, 1)} kg CO₂e</dd>
+      </dl>
+      <div class="note">Select a device on the plan or a bar in the calendar. The scenario (A1, Heart valve TE) sits in the second week: it's the input the AI layer reasons about.</div>
+    </div>`;
+}
+
+// ---------- timeline ----------
+const ROWS = D.equipment.filter(e => e.bookable).map(e => e.id);
+function lanes(list) { // assign lanes so overlapping bookings (incubator shelves) stack
+  const ends = []; return list.map(b => { let i = ends.findIndex(t => t <= b.start_h); if (i < 0) { i = ends.length; ends.push(0); } ends[i] = b.end_h; return [b, i]; });
+}
+function drawTimeline() {
+  const ph = window.innerWidth < 600 ? 5 : 6;
+  const tl = $("#tl"); tl.style.setProperty("--ph", ph + "px");
+  let html = "";
+  // day header
+  html += `<div class="tl-row days"><div class="tl-label"><span class="eyebrow" style="font-size:10px">${week ? "12–18" : "5–11"} Oct</span></div><div class="tl-track">`;
+  for (let d = 0; d < 7; d++) html += `<div class="dayline" style="left:${d * 24 * ph}px"></div><div class="dayname${d > 4 ? " we" : ""}" style="left:${d * 24 * ph}px">${DAYN[d]} ${5 + week * 7 + d}</div>`;
+  html += `</div></div>`;
+  // grid row
+  html += `<div class="tl-row grid"><div class="tl-label"><span class="mono">Grid</span><small>gCO₂e/kWh, hourly</small></div><div class="tl-track">`;
+  for (let h = 0; h < 168; h++) { const v = D.grid[wS() + h], t = (v - GMIN) / (GMAX - GMIN);
+    html += `<div class="gcell" title="${when(wS() + h)} · ${fmt(v, 0)} g/kWh" style="left:${h * ph}px;width:${ph}px;height:${8 + t * 28}px;background:${ramp(t)}"></div>`; }
+  html += `</div></div>`;
+  for (const id of ROWS) {
+    const e = EQ[id];
+    const list = D.bookings.filter(b => b.equipment_id === id && inWeek(b)).sort((a, b) => a.start_h - b.start_h);
+    const L = lanes(list); const nl = Math.max(1, ...L.map(x => x[1] + 1));
+    const rowH = Math.max(34, 10 + nl * 11);
+    html += `<div class="tl-row" style="height:${rowH}px"><div class="tl-label"><span class="mono">${id}</span><small>${esc(e.name.replace(/\s*\(.*\)/, ""))}</small></div><div class="tl-track">`;
+    for (let d = 1; d < 7; d++) html += `<div class="dayline" style="left:${d * 24 * ph}px"></div>`;
+    const lh = (rowH - 10) / nl;
+    for (const [b, lane] of L) {
+      const s = Math.max(b.start_h, wS()) - wS(), t = Math.min(b.end_h, wE()) - wS();
+      html += `<button type="button" class="bar ${b.scenario ? "pending" : b.group}${selBk === b.booking_id ? " sel" : ""}" data-bk="${b.booking_id}"
+        title="${esc(GROUP[b.group].name)} · ${esc(b.purpose)} · ${span(b)}"
+        aria-label="${esc(b.purpose)}, ${span(b)}"
+        style="left:${s * ph}px;width:${Math.max(3, (t - s) * ph - 1)}px;top:${5 + lane * lh}px;height:${Math.max(6, lh - 3)}px"></button>`;
+    }
+    html += `</div></div>`;
+  }
+  tl.innerHTML = html;
+  tl.querySelectorAll(".bar").forEach(el => el.addEventListener("click", () => { selBk = el.dataset.bk; selEq = null; render(); }));
+  $("#grid-range").textContent = `${fmt(GMIN, 0)}–${fmt(GMAX, 0)} g`;
+}
+
+// ---------- scenario ----------
+function drawScenario() {
+  const scen = D.bookings.filter(b => b.scenario).sort((a, b) => b.kg_typ - a.kg_typ);
+  const tot = k => scen.reduce((a, b) => a + b[k], 0);
+  const max = Math.max(...scen.map(b => b.kg_typ)), T = tot("kg_typ");
+  $("#sc-body").innerHTML = scen.map(b => `<tr class="clk${selBk === b.booking_id ? " sel" : ""}" data-bk="${b.booking_id}" tabindex="0">
+    <td><span class="mono">${b.equipment_id}</span> <span class="muted">${esc(EQ[b.equipment_id].name.replace(/\s*\(.*\)/, ""))}</span></td>
+    <td>${span(b)}</td><td>${esc(b.purpose)}${b.load_pct !== "" ? ` <span class="muted">(${b.load_pct}% load)</span>` : ""}</td>
+    <td>${flexChip(b.movable)}</td>
+    <td class="num mono">${fmt(b.kwh, 1)}</td>
+    <td class="num mono"><strong>${fmt(b.kg_typ, 2)}</strong> <span class="muted">${fmt(b.kg_low, 1)}–${fmt(b.kg_high, 1)}</span></td>
+    <td><div class="share"><i style="width:${Math.round(b.kg_typ / max * 90)}px"></i><span class="mono muted">${Math.round(b.kg_typ / T * 100)}%</span></div></td></tr>`).join("");
+  $("#sc-body").querySelectorAll("tr").forEach(tr => {
+    const go = () => { selBk = tr.dataset.bk; selEq = null; if (week !== 1) setWeek(1); else render(); $("#insp").scrollIntoView({block: "nearest", behavior: "smooth"}); };
+    tr.addEventListener("click", go); tr.addEventListener("keydown", ev => { if (ev.key === "Enter") go(); });
+  });
+  const fixed = scen.filter(b => b.movable === "no").reduce((a, b) => a + b.kg_typ, 0);
+  $("#sc-tot").innerHTML = `
+    <div><span class="eyebrow">Total estimate</span><span class="big mono">≈${fmt(T, 1)} kg CO₂e</span></div>
+    <div><span class="eyebrow">Range</span><span class="mono">${fmt(tot("kg_low"), 1)}–${fmt(tot("kg_high"), 1)} kg</span></div>
+    <div><span class="eyebrow">Energy</span><span class="mono">${fmt(tot("kwh"), 1)} kWh</span></div>
+    <div><span class="eyebrow">Locked by constraints</span><span class="mono">${fmt(fixed, 1)} kg (${Math.round(fixed / T * 100)}%)</span></div>
+    <div><span class="eyebrow">Open to suggestions</span><span class="mono">${fmt(T - fixed, 1)} kg (${Math.round((T - fixed) / T * 100)}%)</span></div>`;
+}
+
+function drawSources() {
+  $("#src").innerHTML = Object.entries(D.sources).filter(([k]) => k !== "ASSUMED").map(([k, v]) => {
+    const m = v.match(/https?:\/\/\S+$/); const txt = m ? v.slice(0, m.index) : v;
+    return `<li>${esc(txt)}${m ? `<a href="${m[0]}" target="_blank" rel="noopener">${esc(m[0])}</a>` : ""}</li>`; }).join("")
+    + `<li>Values tagged <em>estimate</em> with source “Team assumption” are placeholders at typical manufacturer-spec level, to be replaced by datasheet or measured values.</li>`;
+}
+
+function setWeek(w) { week = w; try { localStorage.setItem("labx-week", String(w)); } catch (e) {}
+  $("#wk0").setAttribute("aria-pressed", w === 0); $("#wk1").setAttribute("aria-pressed", w === 1); render(); }
+function render() { drawPlan(); drawInspector(); drawTimeline(); drawScenario(); }
+$("#wk0").addEventListener("click", () => { selBk = null; setWeek(0); });
+$("#wk1").addEventListener("click", () => { selBk = null; setWeek(1); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(drawTimeline, 150); });
+drawSources(); setWeek(week);
+</script>

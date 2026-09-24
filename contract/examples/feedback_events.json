@@ -1,0 +1,21 @@
+[
+  {
+    "event_id": "FB-0001",
+    "request_id": "REQ-A1-2026-10-12",
+    "suggestion_id": "S2",
+    "suggestion_type": "reschedule",
+    "equipment_id": "CONF-1",
+    "action": "accept",
+    "timestamp": "2026-10-09 14:02"
+  },
+  {
+    "event_id": "FB-0002",
+    "request_id": "REQ-A1-2026-10-12",
+    "suggestion_id": "S1",
+    "suggestion_type": "coordinate",
+    "equipment_id": "AUT-1",
+    "action": "reject",
+    "reason": "time_sensitive_sample",
+    "timestamp": "2026-10-09 14:03"
+  }
+]

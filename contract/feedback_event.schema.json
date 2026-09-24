@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "feedback_event.schema.json",
+  "title": "FeedbackEvent",
+  "description": "What the UI records when the researcher reacts to a suggestion. Deliberately contains NO researcher or group identifier (Phase 1, section 3.1).",
+  "type": "object",
+  "required": ["event_id", "request_id", "suggestion_id", "suggestion_type", "equipment_id", "action", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {"type": "string"},
+    "request_id": {"type": "string"},
+    "suggestion_id": {"type": "string"},
+    "suggestion_type": {"type": "string", "enum": ["reschedule", "share", "coordinate"]},
+    "equipment_id": {"type": "string"},
+    "action": {"type": "string", "enum": ["accept", "reject", "modify", "flag_error"]},
+    "reason": {
+      "description": "OPTIONAL. Rejecting takes one click; a reason is never required.",
+      "type": "string",
+      "enum": ["time_sensitive_sample", "protocol_constraint", "not_available_then", "estimate_looks_wrong", "other"]
+    },
+    "comment": {"type": "string", "maxLength": 280, "description": "Optional free text; only for flag_error, routed to the lab manager"},
+    "modified_change": {"type": "object", "description": "For action = modify: the change the researcher actually applied (same shape as suggestion.change)"},
+    "timestamp": {"type": "string", "description": "YYYY-MM-DD HH:MM"}
+  }
+}

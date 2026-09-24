@@ -1,0 +1,47 @@
+{
+  "request_id": "REQ-A1-2026-10-12",
+  "booking_ids": ["BK-056", "BK-057", "BK-061", "BK-069", "BK-078", "BK-079", "BK-085", "BK-090", "BK-098", "BK-099"],
+  "estimate": {
+    "kwh": 89.75,
+    "kg": {"low": 15.79, "typ": 24.9, "high": 36.59},
+    "hotspots": [
+      {"equipment_id": "BIO-1", "kg_typ": 15.94, "share_pct": 64.0, "locked": true},
+      {"equipment_id": "CONF-1", "kg_typ": 2.74, "share_pct": 11.0, "locked": false},
+      {"equipment_id": "BSC-1", "kg_typ": 2.37, "share_pct": 9.5, "locked": false},
+      {"equipment_id": "AUT-1", "kg_typ": 2.05, "share_pct": 8.2, "locked": false}
+    ],
+    "locked_kg": 17.64
+  },
+  "suggestions": [
+    {
+      "id": "S1",
+      "type": "coordinate",
+      "booking_ids": ["BK-078"],
+      "headline": "Join an autoclave cycle that is already running on Tuesday",
+      "change": {"merge_into_booking_id": "BK-075"},
+      "saving_kg": {"low": 1.44, "typ": 2.05, "high": 2.87},
+      "saving_pct": 100.0,
+      "why": "Another group runs a 45% load at 16:00 the same day. Your 40% load fits in it, so one full cycle (6 kWh) is avoided.",
+      "tradeoff": "Your items must be ready by 16:00 instead of 17:00.",
+      "confidence": "medium",
+      "needs_other_party": true
+    },
+    {
+      "id": "S2",
+      "type": "reschedule",
+      "booking_ids": ["BK-098"],
+      "headline": "Image on Friday afternoon instead of Thursday evening",
+      "change": {"new_start": "2026-10-16 12:00", "new_end": "2026-10-16 16:00"},
+      "saving_kg": {"low": 1.16, "typ": 1.93, "high": 2.89},
+      "saving_pct": 70.2,
+      "why": "The grid averages ~128 g/kWh on Fri 12:00–16:00 vs ~381 on Thu 19:00–23:00, and the lasers are already warm from the session before.",
+      "tradeoff": "Imaging happens 17 hours later than planned.",
+      "confidence": "low",
+      "needs_other_party": false
+    }
+  ],
+  "suppressed": [
+    {"booking_id": "BK-057", "reason": "hard_constraint", "detail": "Bioreactor conditioning: protocol timing fixed, safety interlock."},
+    {"booking_id": "BK-061", "reason": "hard_constraint", "detail": "Continuous culture in the incubator cannot be interrupted."}
+  ]
+}

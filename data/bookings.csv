@@ -1,0 +1,111 @@
+booking_id,equipment_id,group,researcher,start,end,purpose,movable,constraint,load_pct,shelves,scenario,kwh,kg_low,kg_typ,kg_high
+BK-001,INC-1,B,B1,2026-10-05 00:00,2026-10-19 00:00,Chondrocyte pellets,no,Continuous culture: cannot be interrupted,,2,False,14.42,2.566,3.666,5.866
+BK-002,INC-1,C,C1,2026-10-05 00:00,2026-10-14 12:00,Endothelial cells,no,Continuous culture: cannot be interrupted,,1,False,4.892,0.892,1.274,2.038
+BK-003,INC-2,A,A2,2026-10-05 00:00,2026-10-11 12:00,Valve interstitial cells,no,Continuous culture: cannot be interrupted,,1,False,3.348,0.599,0.856,1.37
+BK-004,INC-3,C,C2,2026-10-05 00:00,2026-10-09 12:00,Smooth muscle cells,no,Continuous culture: cannot be interrupted,,1,False,2.318,0.436,0.623,0.997
+BK-005,BSC-2,A,A1,2026-10-05 08:30,2026-10-05 11:30,Medium change,within day,,,,False,1.38,0.264,0.329,0.395
+BK-006,BIO-1,C,C2,2026-10-05 09:00,2026-10-09 09:00,Graft burst-pressure conditioning (96 h),no,Protocol timing fixed; safety interlock,,,False,57.6,9.245,15.408,23.113
+BK-007,CEN-1,C,C1,2026-10-05 09:00,2026-10-05 09:30,Cell wash,within day,,,,False,0.55,0.085,0.142,0.199
+BK-008,AUT-1,C,C2,2026-10-05 10:00,2026-10-05 11:30,Sterilise tools,±1 day,,50,,False,6.0,0.846,1.209,1.693
+BK-009,FLU-1,C,C2,2026-10-05 10:00,2026-10-05 12:00,Viability staining check,within day,,,,False,0.7,0.082,0.136,0.204
+BK-010,BSC-1,B,B1,2026-10-05 12:00,2026-10-05 13:30,Passaging,within day,,,,False,1.17,0.152,0.19,0.228
+BK-011,BSC-2,C,C2,2026-10-05 13:00,2026-10-05 14:30,Medium change,within day,,,,False,0.69,0.093,0.116,0.14
+BK-012,AUT-1,A,A1,2026-10-05 13:30,2026-10-05 15:00,Sterilise tools,±1 day,,90,,False,6.0,0.737,1.053,1.474
+BK-013,BSC-1,C,C2,2026-10-05 13:30,2026-10-05 15:00,Passaging,within day,,,,False,1.17,0.164,0.205,0.246
+BK-014,FH-1,C,C2,2026-10-05 13:30,2026-10-05 14:30,Solvent work,within day,,,,False,1.5,0.129,0.258,0.516
+BK-015,BSC-2,A,A1,2026-10-05 15:00,2026-10-05 17:00,Harvest,within day,,,,False,0.92,0.174,0.217,0.261
+BK-016,BSC-1,C,C1,2026-10-06 09:00,2026-10-06 11:30,Seeding,within day,,,,False,1.95,0.328,0.41,0.492
+BK-017,BSC-2,A,A1,2026-10-06 09:30,2026-10-06 12:30,Seeding,within day,,,,False,1.38,0.207,0.258,0.31
+BK-018,SHK-1,C,C1,2026-10-06 10:00,2026-10-08 16:00,Bacterial pre-culture,no,Growth curve timing,,,False,5.557,1.013,1.447,2.171
+BK-019,BSC-1,A,A1,2026-10-06 12:30,2026-10-06 15:00,Seeding,within day,,,,False,1.95,0.253,0.316,0.379
+BK-020,BSC-2,A,A2,2026-10-06 12:30,2026-10-06 15:30,Passaging,within day,,,,False,1.38,0.187,0.234,0.281
+BK-021,FH-1,B,B2,2026-10-06 13:00,2026-10-06 14:00,Solvent work,within day,,,,False,1.5,0.119,0.239,0.478
+BK-022,AUT-1,C,C2,2026-10-06 13:30,2026-10-06 15:00,Sterilise tools,±1 day,,40,,False,6.0,0.704,1.005,1.408
+BK-023,CEN-1,C,C1,2026-10-06 15:00,2026-10-06 15:30,Pellet collection,within day,,,,False,0.55,0.068,0.114,0.159
+BK-024,AUT-1,A,A1,2026-10-06 16:00,2026-10-06 17:30,Sterilise tools,±1 day,,60,,False,6.0,1.144,1.634,2.288
+BK-025,BSC-2,C,C2,2026-10-06 16:30,2026-10-06 18:00,Medium change,within day,,,,False,0.69,0.159,0.199,0.239
+BK-026,CONF-1,A,A1,2026-10-06 16:30,2026-10-06 20:30,Z-stack acquisition,within week,,,,False,7.2,1.347,2.245,3.368
+BK-027,BSC-1,A,A1,2026-10-07 09:00,2026-10-07 12:00,Passaging,within day,,,,False,2.34,0.408,0.51,0.611
+BK-028,BSC-2,C,C2,2026-10-07 10:30,2026-10-07 13:30,Seeding,within day,,,,False,1.38,0.201,0.252,0.302
+BK-029,CEN-1,A,A1,2026-10-07 11:00,2026-10-07 11:30,Pellet collection,within day,,,,False,0.55,0.058,0.097,0.136
+BK-030,INC-3,B,B2,2026-10-07 12:00,2026-10-19 00:00,Disc explants,no,Continuous culture: cannot be interrupted,,1,False,5.922,1.034,1.476,2.362
+BK-031,AUT-1,B,B1,2026-10-07 13:30,2026-10-07 15:00,Sterilise tools,±1 day,,60,,False,6.0,0.748,1.068,1.496
+BK-032,BSC-2,A,A1,2026-10-07 13:30,2026-10-07 16:30,Seeding,within day,,,,False,1.38,0.231,0.289,0.347
+BK-033,CEN-1,B,B2,2026-10-07 13:30,2026-10-07 14:00,Pellet collection,within day,,,,False,0.55,0.058,0.096,0.135
+BK-034,BSC-1,B,B2,2026-10-07 16:00,2026-10-07 18:00,Passaging,within day,,,,False,1.56,0.384,0.48,0.576
+BK-035,CEN-1,A,A1,2026-10-07 17:30,2026-10-07 18:00,Cell wash,within day,,,,False,0.55,0.113,0.189,0.264
+BK-036,BSC-1,A,A2,2026-10-08 09:00,2026-10-08 10:30,Passaging,within day,,,,False,1.17,0.195,0.244,0.293
+BK-037,BSC-2,B,B2,2026-10-08 09:00,2026-10-08 11:00,Passaging,within day,,,,False,0.92,0.147,0.184,0.221
+BK-038,BSC-1,A,A1,2026-10-08 12:00,2026-10-08 14:00,Passaging,within day,,,,False,1.56,0.173,0.216,0.259
+BK-039,CEN-1,B,B2,2026-10-08 12:30,2026-10-08 13:00,Cell wash,within day,,,,False,0.55,0.045,0.075,0.105
+BK-040,BSC-1,B,B1,2026-10-08 14:00,2026-10-08 17:00,Transfection,within day,,,,False,2.34,0.36,0.45,0.54
+BK-041,AUT-1,C,C2,2026-10-08 16:00,2026-10-08 17:30,Sterilise glassware,±1 day,,40,,False,6.0,1.051,1.502,2.103
+BK-042,BSC-2,A,A2,2026-10-08 16:00,2026-10-08 18:00,Passaging,within day,,,,False,0.92,0.193,0.241,0.289
+BK-043,BSC-1,C,C1,2026-10-09 09:30,2026-10-09 11:30,Harvest,within day,,,,False,1.56,0.241,0.301,0.361
+BK-044,BSC-2,C,C1,2026-10-09 09:30,2026-10-09 12:30,Seeding,within day,,,,False,1.38,0.198,0.247,0.296
+BK-045,AUT-1,B,B2,2026-10-09 11:00,2026-10-09 12:30,Sterilise glassware,±1 day,,90,,False,6.0,0.647,0.924,1.294
+BK-046,BSC-2,B,B2,2026-10-09 12:30,2026-10-09 15:30,Transfection,within day,,,,False,1.38,0.176,0.22,0.264
+BK-047,CONF-1,C,C1,2026-10-09 12:30,2026-10-09 15:30,Live imaging,within week,,,,False,5.6,0.528,0.88,1.32
+BK-048,CEN-1,B,B1,2026-10-09 13:00,2026-10-09 13:30,Cell wash,within day,,,,False,0.55,0.051,0.085,0.119
+BK-049,BSC-1,A,A1,2026-10-09 13:30,2026-10-09 15:00,Harvest,within day,,,,False,1.17,0.146,0.183,0.22
+BK-050,CEN-1,B,B1,2026-10-09 14:30,2026-10-09 15:00,Pellet collection,within day,,,,False,0.55,0.052,0.087,0.121
+BK-051,AUT-1,C,C1,2026-10-09 15:30,2026-10-09 17:00,Sterilise glassware,±1 day,,30,,False,6.0,0.964,1.377,1.927
+BK-052,CEN-1,A,A1,2026-10-09 15:30,2026-10-09 16:00,Pellet collection,within day,,,,False,0.55,0.064,0.106,0.149
+BK-053,BSC-2,B,B2,2026-10-10 10:00,2026-10-10 11:30,Transfection,within day,,,,False,0.69,0.081,0.102,0.122
+BK-054,BSC-2,A,A2,2026-10-11 12:00,2026-10-11 13:30,Medium change,within day,,,,False,0.69,0.071,0.089,0.106
+BK-055,BSC-2,A,A1,2026-10-12 08:30,2026-10-12 10:00,Passaging,within day,,,,False,0.69,0.149,0.186,0.223
+BK-056,BSC-1,A,A1,2026-10-12 09:00,2026-10-12 12:00,Seeding valve scaffolds,within day,,,,True,2.34,0.391,0.489,0.587
+BK-057,BIO-1,A,A1,2026-10-12 10:00,2026-10-16 10:00,Cyclic strain conditioning (96 h),no,Protocol timing fixed; safety interlock,,,True,57.6,9.564,15.94,23.911
+BK-058,AUT-1,B,B2,2026-10-12 11:30,2026-10-12 13:00,Sterilise glassware,±1 day,,60,,False,6.0,0.668,0.954,1.336
+BK-059,BSC-1,C,C2,2026-10-12 12:00,2026-10-12 15:00,Seeding,within day,,,,False,2.34,0.31,0.387,0.464
+BK-060,CEN-1,C,C2,2026-10-12 12:00,2026-10-12 12:30,Pellet collection,within day,,,,False,0.55,0.05,0.084,0.118
+BK-061,INC-2,A,A1,2026-10-12 12:00,2026-10-19 00:00,"Scaffold culture, 2 shelves",no,Continuous culture: cannot be interrupted,,2,True,6.695,1.188,1.697,2.714
+BK-062,FH-1,C,C1,2026-10-12 12:30,2026-10-12 13:30,Fixative prep,within day,,,,False,1.5,0.118,0.237,0.473
+BK-063,BSC-2,B,B2,2026-10-12 14:00,2026-10-12 16:00,Harvest,within day,,,,False,0.92,0.142,0.178,0.213
+BK-064,AUT-1,A,A2,2026-10-12 14:30,2026-10-12 16:00,Sterilise waste,±1 day,,60,,False,6.0,0.828,1.183,1.656
+BK-065,CONF-1,A,A1,2026-10-12 14:30,2026-10-12 17:30,Z-stack acquisition,within week,,,,False,5.6,0.776,1.294,1.941
+BK-066,BSC-1,C,C1,2026-10-12 15:00,2026-10-12 18:00,Passaging,within day,,,,False,2.34,0.493,0.616,0.74
+BK-067,BSC-2,A,A1,2026-10-13 08:30,2026-10-13 11:30,Transfection,within day,,,,False,1.38,0.264,0.33,0.396
+BK-068,CEN-1,A,A1,2026-10-13 08:30,2026-10-13 09:00,Cell wash,within day,,,,False,0.55,0.099,0.165,0.231
+BK-069,BSC-1,A,A1,2026-10-13 09:00,2026-10-13 12:00,Medium change + seeding,within day,,,,True,2.34,0.408,0.511,0.613
+BK-070,AUT-1,B,B2,2026-10-13 10:00,2026-10-13 11:30,Sterilise tools,±1 day,,75,,False,6.0,0.849,1.212,1.697
+BK-071,BSC-1,B,B2,2026-10-13 12:00,2026-10-13 14:00,Transfection,within day,,,,False,1.56,0.206,0.258,0.31
+BK-072,BSC-2,A,A2,2026-10-13 13:00,2026-10-13 14:30,Transfection,within day,,,,False,0.69,0.093,0.117,0.14
+BK-073,CEN-1,C,C1,2026-10-13 13:30,2026-10-13 14:00,Cell wash,within day,,,,False,0.55,0.054,0.091,0.127
+BK-074,BSC-2,C,C1,2026-10-13 15:00,2026-10-13 18:00,Medium change,within day,,,,False,1.38,0.298,0.373,0.447
+BK-075,AUT-1,C,C1,2026-10-13 16:00,2026-10-13 17:30,Sterilise glassware,±1 day,,45,,False,6.0,1.213,1.733,2.426
+BK-076,BSC-1,B,B1,2026-10-13 16:00,2026-10-13 17:30,Passaging,within day,,,,False,1.17,0.27,0.338,0.405
+BK-077,CONF-1,C,C2,2026-10-13 16:30,2026-10-13 20:30,Live imaging,within week,,,,False,7.2,1.456,2.426,3.639
+BK-078,AUT-1,A,A1,2026-10-13 17:00,2026-10-13 18:30,Sterilise media bottles + tools,±1 day,,40,,True,6.0,1.436,2.052,2.873
+BK-079,BSC-1,A,A1,2026-10-14 09:00,2026-10-14 12:00,Medium change,within day,,,,True,2.34,0.385,0.481,0.577
+BK-080,BSC-2,A,A2,2026-10-14 09:00,2026-10-14 10:30,Seeding,within day,,,,False,0.69,0.127,0.158,0.19
+BK-081,AUT-1,A,A2,2026-10-14 09:30,2026-10-14 11:00,Sterilise waste,±1 day,,40,,False,6.0,0.916,1.309,1.833
+BK-082,BSC-1,B,B1,2026-10-14 13:00,2026-10-14 15:00,Passaging,within day,,,,False,1.56,0.212,0.264,0.317
+BK-083,CEN-1,C,C2,2026-10-14 13:30,2026-10-14 14:00,Cell wash,within day,,,,False,0.55,0.053,0.088,0.123
+BK-084,FH-1,B,B2,2026-10-14 13:30,2026-10-14 14:30,Fixative prep,within day,,,,False,1.5,0.127,0.254,0.509
+BK-085,CEN-1,A,A1,2026-10-14 14:00,2026-10-14 14:30,Cell pellet collection,within day,,,,True,0.55,0.059,0.099,0.138
+BK-086,AUT-1,A,A1,2026-10-14 14:30,2026-10-14 16:00,Sterilise tools,±1 day,,50,,False,6.0,0.86,1.229,1.721
+BK-087,BSC-1,B,B1,2026-10-14 15:00,2026-10-14 16:30,Seeding,within day,,,,False,1.17,0.22,0.275,0.33
+BK-088,BSC-2,C,C1,2026-10-14 16:00,2026-10-14 18:00,Passaging,within day,,,,False,0.92,0.218,0.272,0.327
+BK-089,AUT-1,A,A2,2026-10-15 09:00,2026-10-15 10:30,Sterilise tools,±1 day,,60,,False,6.0,1.047,1.496,2.095
+BK-090,BSC-1,A,A1,2026-10-15 09:00,2026-10-15 12:00,Medium change,within day,,,,True,2.34,0.425,0.531,0.637
+BK-091,BSC-2,A,A1,2026-10-15 09:00,2026-10-15 12:00,Medium change,within day,,,,False,1.38,0.251,0.313,0.376
+BK-092,CEN-1,B,B1,2026-10-15 09:30,2026-10-15 10:00,Cell wash,within day,,,,False,0.55,0.087,0.144,0.202
+BK-093,FH-1,A,A2,2026-10-15 11:30,2026-10-15 12:30,Solvent work,within day,,,,False,1.5,0.137,0.275,0.549
+BK-094,BSC-1,C,C1,2026-10-15 12:00,2026-10-15 15:00,Seeding,within day,,,,False,2.34,0.333,0.416,0.499
+BK-095,BSC-2,B,B1,2026-10-15 13:30,2026-10-15 16:30,Harvest,within day,,,,False,1.38,0.237,0.297,0.356
+BK-096,FLU-1,A,A1,2026-10-15 13:30,2026-10-15 15:00,Immunostaining check,within day,,,,False,0.525,0.058,0.096,0.144
+BK-097,BSC-1,C,C1,2026-10-15 15:00,2026-10-15 18:00,Seeding,within day,,,,False,2.34,0.539,0.674,0.809
+BK-098,CONF-1,A,A1,2026-10-15 19:00,2026-10-15 23:00,Live imaging of seeded valves,within week,,,,True,7.2,1.645,2.741,4.112
+BK-099,BSC-1,A,A1,2026-10-16 09:00,2026-10-16 12:00,Harvest for imaging,within day,,,,True,2.34,0.285,0.357,0.428
+BK-100,CEN-1,A,A1,2026-10-16 09:00,2026-10-16 09:30,Cell wash,within day,,,,False,0.55,0.058,0.097,0.136
+BK-101,FH-1,A,A1,2026-10-16 09:00,2026-10-16 11:00,Solvent work,within day,,,,False,3.0,0.246,0.492,0.984
+BK-102,CONF-1,B,B2,2026-10-16 10:00,2026-10-16 12:00,Chondrocyte imaging,within week,,,,False,4.0,0.354,0.59,0.885
+BK-103,BSC-2,B,B1,2026-10-16 10:30,2026-10-16 12:00,Passaging,within day,,,,False,0.69,0.075,0.094,0.113
+BK-104,AUT-1,A,A2,2026-10-16 12:30,2026-10-16 14:00,Sterilise glassware,±1 day,,40,,False,6.0,0.482,0.689,0.965
+BK-105,BSC-2,B,B2,2026-10-16 12:30,2026-10-16 15:00,Harvest,within day,,,,False,1.15,0.11,0.137,0.165
+BK-106,BSC-1,B,B1,2026-10-16 13:00,2026-10-16 16:00,Passaging,within day,,,,False,2.34,0.249,0.311,0.374
+BK-107,AUT-1,A,A1,2026-10-16 14:00,2026-10-16 15:30,Sterilise waste,±1 day,,60,,False,6.0,0.571,0.816,1.143
+BK-108,FLU-1,C,C1,2026-10-16 16:00,2026-10-16 17:30,Viability staining check,within day,,,,False,0.525,0.065,0.108,0.161
+BK-109,BSC-2,A,A2,2026-10-17 11:00,2026-10-17 12:30,Transfection,within day,,,,False,0.69,0.069,0.087,0.104
+BK-110,BSC-2,B,B1,2026-10-18 10:30,2026-10-18 12:00,Transfection,within day,,,,False,0.69,0.088,0.11,0.132

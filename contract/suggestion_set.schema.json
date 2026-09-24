@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "suggestion_set.schema.json",
+  "title": "SuggestionSet",
+  "description": "What the AI layer returns for one booking request, and what the UI renders. All kg/kWh numbers must come from calculator.py.",
+  "type": "object",
+  "required": ["request_id", "estimate", "suggestions", "suppressed"],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {"type": "string", "description": "e.g. 'REQ-A1-2026-10-12'"},
+    "booking_ids": {"type": "array", "items": {"type": "string", "pattern": "^BK-\\d{3}$"}},
+    "estimate": {
+      "type": "object",
+      "required": ["kwh", "kg", "hotspots", "locked_kg"],
+      "additionalProperties": false,
+      "properties": {
+        "kwh": {"type": "number"},
+        "kg": {"$ref": "#/$defs/range"},
+        "hotspots": {
+          "description": "Largest contributors, sorted by share, max 4.",
+          "type": "array", "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": ["equipment_id", "kg_typ", "share_pct"],
+            "additionalProperties": false,
+            "properties": {
+              "equipment_id": {"type": "string"},
+              "kg_typ": {"type": "number"},
+              "share_pct": {"type": "number"},
+              "locked": {"type": "boolean", "description": "true if every booking on it has movable = no"}
+            }
+          }
+        },
+        "locked_kg": {"type": "number", "description": "kg CO2e in bookings with movable = no (out of the tool's reach)"}
+      }
+    },
+    "suggestions": {
+      "description": "At most 3, sorted by saving_kg.typ descending.",
+      "type": "array", "maxItems": 3,
+      "items": {"$ref": "#/$defs/suggestion"}
+    },
+    "suppressed": {
+      "description": "Bookings the tool deliberately did NOT touch, with the reason. Shown on request, for transparency.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["booking_id", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "booking_id": {"type": "string"},
+          "reason": {"type": "string", "enum": ["hard_constraint", "muted_by_user_feedback", "saving_below_threshold", "disabled_by_lab_manager"]},
+          "detail": {"type": "string"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "range": {
+      "type": "object",
+      "required": ["low", "typ", "high"],
+      "additionalProperties": false,
+      "properties": {"low": {"type": "number"}, "typ": {"type": "number"}, "high": {"type": "number"}}
+    },
+    "suggestion": {
+      "type": "object",
+      "required": ["id", "type", "booking_ids", "headline", "change", "saving_kg", "saving_pct", "why", "tradeoff", "confidence", "needs_other_party"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^S\\d+$"},
+        "type": {"type": "string", "enum": ["reschedule", "share", "coordinate"],
+                 "description": "reschedule = move in time to a cleaner grid hour; share = use a device already running / another unit; coordinate = merge or batch energy-intensive activities"},
+        "booking_ids": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "headline": {"type": "string", "maxLength": 80, "description": "One short line the researcher reads first"},
+        "change": {
+          "type": "object",
+          "description": "Machine-readable change the UI applies on Accept.",
+          "additionalProperties": false,
+          "properties": {
+            "new_start": {"type": "string", "description": "YYYY-MM-DD HH:MM"},
+            "new_end": {"type": "string"},
+            "new_equipment_id": {"type": "string"},
+            "merge_into_booking_id": {"type": "string"}
+          }
+        },
+        "saving_kg": {"$ref": "#/$defs/range"},
+        "saving_pct": {"type": "number", "description": "Saving relative to the booking(s) changed"},
+        "why": {"type": "string", "maxLength": 200},
+        "tradeoff": {"type": "string", "maxLength": 160, "description": "What the researcher gives up. Never empty."},
+        "confidence": {"type": "string", "enum": ["low", "medium", "high"],
+                       "description": "Lowest confidence among the equipment values involved (estimate → low, derived → medium, measured → high)"},
+        "needs_other_party": {"type": "boolean", "description": "true if another group must agree (e.g. merging autoclave cycles). The other group is never named to the researcher."}
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+booking_id,equipment_id,group,researcher,start,end,purpose,movable,constraint,load_pct,shelves,scenario,kwh,kg_low,kg_typ,kg_high
+BK-056,BSC-1,A,A1,2026-10-12 09:00,2026-10-12 12:00,Seeding valve scaffolds,within day,,,,True,2.34,0.391,0.489,0.587
+BK-057,BIO-1,A,A1,2026-10-12 10:00,2026-10-16 10:00,Cyclic strain conditioning (96 h),no,Protocol timing fixed; safety interlock,,,True,57.6,9.564,15.94,23.911
+BK-061,INC-2,A,A1,2026-10-12 12:00,2026-10-19 00:00,"Scaffold culture, 2 shelves",no,Continuous culture: cannot be interrupted,,2,True,6.695,1.188,1.697,2.714
+BK-069,BSC-1,A,A1,2026-10-13 09:00,2026-10-13 12:00,Medium change + seeding,within day,,,,True,2.34,0.408,0.511,0.613
+BK-078,AUT-1,A,A1,2026-10-13 17:00,2026-10-13 18:30,Sterilise media bottles + tools,±1 day,,40,,True,6.0,1.436,2.052,2.873
+BK-079,BSC-1,A,A1,2026-10-14 09:00,2026-10-14 12:00,Medium change,within day,,,,True,2.34,0.385,0.481,0.577
+BK-085,CEN-1,A,A1,2026-10-14 14:00,2026-10-14 14:30,Cell pellet collection,within day,,,,True,0.55,0.059,0.099,0.138
+BK-090,BSC-1,A,A1,2026-10-15 09:00,2026-10-15 12:00,Medium change,within day,,,,True,2.34,0.425,0.531,0.637
+BK-098,CONF-1,A,A1,2026-10-15 19:00,2026-10-15 23:00,Live imaging of seeded valves,within week,,,,True,7.2,1.645,2.741,4.112
+BK-099,BSC-1,A,A1,2026-10-16 09:00,2026-10-16 12:00,Harvest for imaging,within day,,,,True,2.34,0.285,0.357,0.428
