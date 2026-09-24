@@ -1,6 +1,6 @@
 # Lab X: pseudo-lab for the ENSU prototype
 
-**5ARF0 Ethics of AI · TU/e · Group ENSU DD**
+**Group ENSU DD**
 
 Our tool estimates the CO₂ footprint of a lab experiment **when the researcher books it**, shows the main
 sources of impact, and suggests up to three alternatives (reschedule, share, coordinate) without touching
