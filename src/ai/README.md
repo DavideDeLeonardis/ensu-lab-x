@@ -41,9 +41,8 @@ booking) ends at exactly `2026-10-16 12:00` on the same equipment, so
 rule/regression tests with the real calculator wired in (via
 `calculator_adapter.RealCalculator`, swapped in for the mocks).
 
-`mock_calculator.py` and `csv_grounded_mock.py` are no longer needed for
-the real demo, but kept for isolated unit testing without needing the
-full data files present.
+`mock_calculator.py` is not needed for the real demo, but is kept for the
+unit tests in `tests/test_build.py`, which run without the data files.
 
 ## equipment.csv corrections (both confirmed against the real 16-row file)
 
@@ -57,18 +56,20 @@ full data files present.
    parenthetical qualifier stripped. See `candidates.derive_alternates()`
    and the two regression tests in `tests/test_build.py`.
 
-## Still open
+## Resolved (contract fixes)
 
-1. Where `FeedbackEvent` history lives for Rule 9 (muting) -- raised in
-   chat, not yet resolved in `CONTRACT.md`. `rank_proposals()` takes
-   `muted_pairs` as a plain argument meanwhile.
-2. A documentation gap worth flagging to Davide: `calculator.py` reads
-   `e["shelves"]` for shelf-mode equipment; confirm README.md's own data
-   dictionary lists it (may already be fixed).
+- `shareable` = the device serves several groups at once; NOT interchangeable units (README data dictionary).
+- Feedback history for rule 9 lives in `data/feedback_log.json`; `real_data_demo.py` passes
+  `src.contract.feedback.muted_pairs()` into the engine.
+- Movable windows and lab hours come from `src/contract/rules.py`, shared with the validator:
+  reschedules are proposed only Mon–Fri 08:00–20:00, inside the contract's window definitions.
+- Coordinate candidates use `mode == "cycle"` from equipment.csv and must fit the booking's own window.
+- Warm-up is no longer skipped because of the booking's own (moved) original slot.
+- `estimate.hotspots` is aggregated per device, max 4.
+- `tests/test_contract.py` runs this engine on the A1 request and validates the output.
 
-## Known gaps (not silent ones)
+## Known gaps
 
-- Lab operating hours / holidays aren't factored into reschedule search.
-- `generate_coordinate_candidates` only looks at a ±1 day window.
-- `llm_phraser` is still a stub (`NotImplementedError`) -- see its
-  docstring for the intended fallback behaviour before it's wired up.
+- `llm_phraser` is still a stub (`NotImplementedError`). `template_phraser` now writes concrete texts from
+  calculator output + data files (grid g/kWh before/after, "17 hours later than planned", "ready by 16:00"),
+  so an LLM is optional polish, not required for the demo.

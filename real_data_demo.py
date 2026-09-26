@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from src.ai.domain import Booking, load_equipment_csv
 from src.ai.build import build_suggestion_set
 from src.ai.calculator_adapter import RealCalculator
+from src.contract.feedback import muted_pairs
 
 REPO_ROOT = Path(__file__).resolve().parent
 BOOKINGS_CSV = REPO_ROOT / "data" / "bookings.csv"
@@ -45,6 +46,7 @@ result = build_suggestion_set(
     all_bookings=all_bookings,
     equipment_by_id=equipment_by_id,
     calc=calc,
+    muted_pairs=muted_pairs(),  # rule 9, from data/feedback_log.json
 )
 
 print(json.dumps(result, indent=2))

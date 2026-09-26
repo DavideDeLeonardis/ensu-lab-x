@@ -19,8 +19,8 @@ python3 src/lab/calculator.py estimate CONF-1 "2026-10-16 12:00" "2026-10-16 16:
 python3 src/lab/calculator.py saving BK-098 "2026-10-16 12:00" "2026-10-16 16:00" --no-warmup
 python3 src/lab/generate.py                # regenerate data/ and explorer/lab.html after changing a value
 pip install jsonschema && python3 src/contract/validate.py contract/examples/A1_suggestion_set.json
+python3 -m unittest discover tests -v      # contract + engine tests; run before every push
 ```
-Run everything from the repo root. No dependencies except Python 3.9+ (and `jsonschema` for the validator).
 
 ## What's in here
 ```
@@ -33,6 +33,7 @@ ensu-lab-x/
 │   ├── scenario_request.csv  the demo case: researcher A1's request for 12–16 Oct
 │   ├── grid_intensity.csv    hourly gCO₂e/kWh
 │   ├── sources.csv
+│   ├── feedback_log.json     FeedbackEvents written by the UI, read by the AI for muting (rule 9)
 │   └── lab_data.json         everything above in one file (used by the explorer)
 ├── contract/                 the spec shared by AI and UI
 │   ├── schemas/              suggestion_set + feedback_event JSON schemas
@@ -42,9 +43,11 @@ ensu-lab-x/
 │   │   ├── generate.py       builds data/ and explorer/lab.html from a fixed seed
 │   │   └── calculator.py     the deterministic calculator: all kg/kWh numbers come from here
 │   ├── contract/
-│   │   └── validate.py       checks AI output / feedback against schemas + rules
+│   │   ├── validate.py       checks AI output / feedback against schemas + every checkable rule
+│   │   └── feedback.py       append_event() for the UI, muted_pairs() for the AI
 │   ├── ai/                   AI team works here
 │   └── ui/                   UI team works here
+├── tests/                    contract tests (incl. running the AI engine end-to-end)
 └── explorer/
     ├── lab.html              interactive view of the lab
     └── lab_template.html
@@ -63,9 +66,12 @@ Five rooms: cell culture, cold storage, microscopy, tissue testing, prep & steri
 | `low`, `high` | multipliers giving the uncertainty range |
 | `confidence` | `measured` (value in the source) · `derived` (calculated from a source figure) · `estimate` (team assumption) |
 | `basis` | one line explaining the number |
+| `shelves` | shelf count of an incubator (`shelf` mode only) |
+| `bookable` | can be reserved in the booking system (freezers, heat block, water bath are always on) |
+| `shareable` | can serve several groups **at the same time** (incubator shelves, a shared autoclave cycle, back-to-back confocal sessions). It does **not** mean two units are interchangeable: for `share` suggestions, match devices of the same kind |
 
 ### Data dictionary: `bookings.csv`
-`movable` is one of `no`, `within day`, `±1 day`, `within week`. When it is `no`, `constraint` says why
+`movable` is one of `no`, `within day`, `±1 day`, `within week` (exact definitions in `CONTRACT.md`, rule 3). When it is `no`, `constraint` says why
 (continuous culture, protocol timing, safety). `kwh`, `kg_low`, `kg_typ`, `kg_high` are precomputed by the calculator.
 
 ## How the estimate works

@@ -33,51 +33,15 @@
         "locked": false
       },
       {
+        "equipment_id": "BSC-1",
+        "kg_typ": 2.37,
+        "share_pct": 9.5,
+        "locked": false
+      },
+      {
         "equipment_id": "AUT-1",
         "kg_typ": 2.05,
         "share_pct": 8.2,
-        "locked": false
-      },
-      {
-        "equipment_id": "INC-2",
-        "kg_typ": 1.7,
-        "share_pct": 6.8,
-        "locked": true
-      },
-      {
-        "equipment_id": "BSC-1",
-        "kg_typ": 0.53,
-        "share_pct": 2.1,
-        "locked": false
-      },
-      {
-        "equipment_id": "BSC-1",
-        "kg_typ": 0.51,
-        "share_pct": 2.1,
-        "locked": false
-      },
-      {
-        "equipment_id": "BSC-1",
-        "kg_typ": 0.49,
-        "share_pct": 2.0,
-        "locked": false
-      },
-      {
-        "equipment_id": "BSC-1",
-        "kg_typ": 0.48,
-        "share_pct": 1.9,
-        "locked": false
-      },
-      {
-        "equipment_id": "BSC-1",
-        "kg_typ": 0.36,
-        "share_pct": 1.4,
-        "locked": false
-      },
-      {
-        "equipment_id": "CEN-1",
-        "kg_typ": 0.1,
-        "share_pct": 0.4,
         "locked": false
       }
     ],
@@ -90,7 +54,7 @@
       "booking_ids": [
         "BK-078"
       ],
-      "headline": "Join another group's run on this equipment",
+      "headline": "Join an autoclave cycle already running on Tuesday",
       "change": {
         "merge_into_booking_id": "BK-075"
       },
@@ -100,8 +64,8 @@
         "high": 2.873
       },
       "saving_pct": 100.0,
-      "why": "Merging into an already-scheduled run on the same equipment saves about 2.05 kg CO2e instead of running two partial loads.",
-      "tradeoff": "Timing depends on another group's slot, and needs their agreement.",
+      "why": "Another group runs a 45% load at 16:00 the same day. Your 40% load fits in it, so one full cycle is avoided: about 2.1 kg CO₂e less.",
+      "tradeoff": "Needs another group's OK, and your items must be ready by 16:00 instead of 17:00.",
       "confidence": "medium",
       "needs_other_party": true
     },
@@ -111,7 +75,7 @@
       "booking_ids": [
         "BK-098"
       ],
-      "headline": "Move this session to 2026-10-16 12:00",
+      "headline": "Move your confocal microscope session to Friday afternoon",
       "change": {
         "new_start": "2026-10-16 12:00",
         "new_end": "2026-10-16 16:00"
@@ -122,8 +86,8 @@
         "high": 2.888
       },
       "saving_pct": 70.2,
-      "why": "The grid is cleaner at the new time, saving about 1.93 kg CO2e.",
-      "tradeoff": "Your booking moves to a different time slot.",
+      "why": "The grid averages ~128 g/kWh on Fri 16 Oct, 12:00–16:00 vs ~381 in your current slot, and the device is already warm from the session before: about 1.9 kg CO₂e less.",
+      "tradeoff": "Your session starts 17 hours later than planned (Fri 12:00 instead of Thu 19:00).",
       "confidence": "low",
       "needs_other_party": false
     }

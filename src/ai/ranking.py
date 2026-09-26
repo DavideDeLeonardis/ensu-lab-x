@@ -13,7 +13,7 @@ Enforces, directly from CONTRACT.md:
           input section doesn't yet say where that history comes from.
 """
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
@@ -36,14 +36,18 @@ class RankedProposal:
     saving_result: SavingResult    # the exact dict calculator.saving() returned
     change: dict                   # exact shape the schema expects under "change"
     needs_other_party: bool = False
+    notes: dict = field(default_factory=dict)  # facts for phrasing, e.g. {"warmup_shared": True}
 
 
-def _follows_another_session(equipment_id: str, new_start: datetime, all_bookings: list[Booking]) -> bool:
+def _follows_another_session(
+    booking: Booking, new_start: datetime, all_bookings: list[Booking]
+) -> bool:
     """README: confocal-style warm-up is skipped if the new slot directly
-    follows another session on the same equipment. A ~zero-gap match is
-    treated as "directly follows"."""
+    follows ANOTHER session on the same equipment. The booking being moved
+    doesn't count: once moved, its original slot no longer exists."""
     return any(
-        b.equipment_id == equipment_id and b.end == new_start
+        b.equipment_id == booking.equipment_id and b.end == new_start
+        and b.booking_id != booking.booking_id
         for b in all_bookings
     )
 
@@ -51,17 +55,19 @@ def _follows_another_session(equipment_id: str, new_start: datetime, all_booking
 def _all_candidates_for_booking(
     booking: Booking, all_bookings: list[Booking], request_ids: set[str], calc: CalculatorPort,
     alternates: Optional[dict[str, list[str]]] = None,
+    cycle_equipment: Optional[set[str]] = None,
 ) -> list[RankedProposal]:
     out: list[RankedProposal] = []
 
     for c in generate_reschedule_candidates(booking, all_bookings):
-        warmup = not _follows_another_session(booking.equipment_id, c.new_start, all_bookings)
+        warmup = not _follows_another_session(booking, c.new_start, all_bookings)
         result = calc.saving(
             booking.booking_id, new_start=fmt(c.new_start), new_end=fmt(c.new_end), warmup=warmup,
         )
         out.append(RankedProposal(
             booking_id=booking.booking_id, type="reschedule", saving_result=result,
             change={"new_start": fmt(c.new_start), "new_end": fmt(c.new_end)},
+            notes={"warmup_shared": not warmup},
         ))
 
     for c in generate_share_candidates(booking, all_bookings, alternates):
@@ -71,7 +77,7 @@ def _all_candidates_for_booking(
             change={"new_equipment_id": c.new_equipment_id},
         ))
 
-    for c in generate_coordinate_candidates(booking, all_bookings):
+    for c in generate_coordinate_candidates(booking, all_bookings, cycle_equipment):
         result = calc.saving(booking.booking_id, cancel=True)
         out.append(RankedProposal(
             booking_id=booking.booking_id, type="coordinate", saving_result=result,
@@ -92,6 +98,7 @@ def rank_proposals(
     calc: CalculatorPort,
     muted_pairs: Optional[set[tuple[str, str]]] = None,
     alternates: Optional[dict[str, list[str]]] = None,
+    cycle_equipment: Optional[set[str]] = None,
 ) -> list[RankedProposal]:
     """
     Returns at most MAX_SUGGESTIONS proposals, biggest saving first, drawn
@@ -108,7 +115,8 @@ def rank_proposals(
 
     candidates: list[RankedProposal] = []
     for booking in movable:
-        for proposal in _all_candidates_for_booking(booking, all_bookings, request_ids, calc, alternates):
+        for proposal in _all_candidates_for_booking(booking, all_bookings, request_ids, calc, alternates,
+                                                    cycle_equipment):
             if (proposal.type, booking.equipment_id) in muted_pairs:
                 continue
             if proposal.saving_result["saving_kg"]["typ"] < MIN_SAVING_KG:

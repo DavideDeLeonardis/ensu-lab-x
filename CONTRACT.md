@@ -80,17 +80,33 @@ Worked example: [`contract/examples/A1_suggestion_set.json`](contract/examples/A
 
 ## 3. Rules the AI layer must follow
 
-These come straight from our Phase 1 report. `src/contract/validate.py` checks rules 1 and 4 automatically.
+These come straight from our Phase 1 report. `src/contract/validate.py` checks every rule marked ✔;
+`tests/test_contract.py` runs the AI engine on the demo request and validates its output.
 
-1. **Never touch a booking with `movable = no`.** List it under `suppressed` with `reason: hard_constraint`.
-2. **Never change the experiment itself**: only time, unit, or batching. No "use fewer samples", no "skip a step".
-3. **Stay inside the `movable` window** (`within day`, `±1 day`, `within week`).
-4. **At most 3 suggestions, biggest saving first**: this limits alert fatigue.
-5. **Numbers come from `calculator.py`, never from the LLM.** The LLM picks and explains; it does not invent kg.
-6. **Always give a range and a trade-off.** `tradeoff` is never empty.
-7. **Don't name other groups or researchers.** Say "another group", and set `needs_other_party: true`.
-8. **Drop suggestions that save less than 0.2 kg CO₂e** (`reason: saving_below_threshold`). Tune later.
-9. **Respect muted suggestions**: a type/equipment pair rejected 3 times by the same lab is suppressed (`muted_by_user_feedback`).
+1. ✔ **Never touch a booking with `movable = no`.** List it under `suppressed` with `reason: hard_constraint`.
+2. ✔ **Never change the experiment itself**: only time, unit, or batching. No "use fewer samples", no "skip a step".
+   A reschedule keeps the same duration; a `share` uses a device of the same category and mode.
+3. ✔ **Stay inside the `movable` window, and inside lab hours.**
+
+   | `movable` | The new slot must lie within |
+   |---|---|
+   | `within day` | the same calendar day (00:00–24:00) |
+   | `±1 day` | original start − 24 h → original end + 24 h |
+   | `within week` | the same calendar week, Monday 00:00 → next Monday 00:00 |
+
+   **Lab hours:** the tool only proposes slots **Mon–Fri, fully inside 08:00–20:00**. The researcher may
+   book outside these hours; the tool never suggests it. For `coordinate`, the merge target must be a cycle
+   on the same device, fully inside the window, with combined load ≤ 100%.
+4. ✔ **At most 3 suggestions, biggest saving first**: this limits alert fatigue.
+5. ✔ **Numbers come from `calculator.py`, never from the LLM.** The LLM picks and explains; it does not invent kg.
+   The validator re-prices every suggestion and accepts a difference of at most 0.01 kg.
+6. ✔ **Always give a range and a trade-off.** `tradeoff` is never empty.
+7. ✔ **Don't name other groups or researchers.** Say "another group", and set `needs_other_party: true`.
+8. ✔ **Drop suggestions that save less than 0.2 kg CO₂e** (`reason: saving_below_threshold`). Tune later.
+9. **Respect muted suggestions**: a (type, equipment) pair rejected 3 times in this lab is not suggested again
+   (`muted_by_user_feedback`). Get the pairs with `src.contract.feedback.muted_pairs()`; see §4.
+
+The output's `estimate.hotspots` has **one entry per device** (bookings on the same device summed), largest first, max 4 (✔).
 
 `confidence` = the lowest confidence of the equipment values involved:
 `estimate` → `low`, `derived` → `medium`, `measured` → `high`.
@@ -123,16 +139,33 @@ Example: [`contract/examples/feedback_events.json`](contract/examples/feedback_e
 | `modify` | Researcher edits the proposed time; `modified_change` stored | Window preferences for this lab |
 | `flag_error` | Short comment sent to the lab manager | Equipment value reviewed (VSD cycle 3) |
 
+### Where feedback is stored
+The UI appends every event to **`data/feedback_log.json`** (a JSON list) with
+`src.contract.feedback.append_event(event)`, which validates it first. The AI layer calls
+`muted_pairs()` before ranking and passes the result as `muted_pairs`. The log is lab-level only.
+
 **No researcher or group ID is stored in feedback.** Feedback is aggregated at lab level only
 (Phase 1, §3.1). Rejecting never needs a justification (Phase 1, §2.2.4).
 
 ## 5. How the UI should use the contract
-- Build against `contract/examples/A1_suggestion_set.json` **now**; swap in the real AI output later.
+- Build against **`contract/examples/A1_suggestion_set_from_ai_layer.json`**: the real AI output for the
+  demo request (regenerate with `python3 real_data_demo.py`). `A1_suggestion_set.json` is the hand-written
+  gold set, same shape.
+- **Display data** (device names, booking times, rooms) is not repeated in the SuggestionSet: look it up by
+  `equipment_id` / `booking_id` in **`data/lab_data.json`** (`equipment`, `bookings`). That file also holds
+  other groups' names and researcher IDs: **never show them** (rule 7); for a merge target show only its time.
+- **Estimate after Accept**: new total = `estimate.kg` − the `saving_kg` of every accepted suggestion
+  (low/typ/high separately). This is exact because each suggestion changes a different booking (✔ checked).
+  No calculator call is needed in the UI.
 - Screen 1, booking form: the fields in §1.
 - Screen 2, result card: `estimate.kg` as a range, `hotspots` (mark `locked` ones), then `suggestions`
   with Accept / Reject / Modify. A "Why not the bioreactor?" link shows `suppressed`.
 - Screen 3, after feedback: updated estimate (accepted) or muted card (rejected).
-- If `needs_other_party` is true, Accept means "Request to join", not "Done".
+- If `needs_other_party` is true, Accept means "Request to join", not "Done": the saving counts only once
+  the other group agrees (for the demo, show it as pending).
+- Every Accept / Reject / Modify / Flag produces one `FeedbackEvent` (§4). In Python, store it with
+  `append_event()`; from a web mock-up, build the same JSON and check a saved list with
+  `python3 src/contract/validate.py <events.json>`.
 
 ## 6. How we evaluate outputs (for the coaching session and Phase 2)
 | Metric | How | Target |
@@ -146,4 +179,4 @@ Example: [`contract/examples/feedback_events.json`](contract/examples/feedback_e
 
 ## Changing the contract
 Open a PR that edits the schema **and** the example **and** this file together, and tag the other two parts.
-`src/contract/validate.py` must pass on the examples.
+`python3 -m unittest discover tests` must pass (gold examples + engine output).

@@ -21,6 +21,7 @@ from datetime import timedelta, datetime
 from typing import Optional
 
 from .domain import Booking, Equipment
+from src.contract.rules import movable_window, in_lab_hours
 
 # Fallback only -- used when no Equipment data is available at all (e.g.
 # equipment.csv has no data rows yet, as of this writing). Once real
@@ -80,24 +81,17 @@ def derive_alternates(equipment_by_id: dict[str, Equipment]) -> dict[str, list[s
 
 # Equipment ids that use load_pct-based cycles (autoclave-style) and can
 # therefore be merged with another partial-load booking.
-MERGEABLE_MODE_EQUIPMENT_HINT = ("AUT",)  # crude prefix match; replace with a
-                                          # real `mode == "cycle"` check once
-                                          # equipment.csv is loaded properly.
+MERGEABLE_MODE_EQUIPMENT_HINT = ("AUT",)  # fallback only: generate_coordinate_candidates
+                                          # uses mode == "cycle" when equipment is passed
 
 
 def _movable_window(booking: Booking) -> tuple[datetime, datetime]:
-    """Earliest/latest start time this booking may be moved to, per its
-    `movable` value. Duration is preserved by the caller."""
-    if booking.movable == "within day":
-        day_start = booking.start.replace(hour=0, minute=0)
-        day_end = booking.start.replace(hour=23, minute=59)
-        return day_start, day_end
-    if booking.movable == "\u00b11 day":
-        return booking.start - timedelta(days=1), booking.start + timedelta(days=1)
-    if booking.movable == "within week":
-        return booking.start - timedelta(days=booking.start.weekday()), \
-               booking.start + timedelta(days=6 - booking.start.weekday())
-    raise ValueError(f"generate candidates called on a non-movable booking: {booking.booking_id}")
+    """(earliest start, latest end) for this booking, as defined in CONTRACT.md rule 3
+    (src/contract/rules.py). Duration is preserved by the caller."""
+    window = movable_window(booking.start, booking.end, booking.movable)
+    if window is None:
+        raise ValueError(f"generate candidates called on a non-movable booking: {booking.booking_id}")
+    return window
 
 
 def _overlaps(a_start, a_end, b_start, b_end) -> bool:
@@ -126,8 +120,8 @@ class CoordinateCandidate:
 def generate_reschedule_candidates(
     booking: Booking, all_bookings: list[Booking], step_minutes: int = 60
 ) -> list[RescheduleCandidate]:
-    """Every hour-aligned slot within the movable window where the same
-    equipment isn't already booked by someone else."""
+    """Every hour-aligned slot within the movable window and inside lab hours
+    (CONTRACT.md rule 3) where the same equipment isn't already booked."""
     if booking.movable == "no":
         return []
     duration = booking.end - booking.start
@@ -141,7 +135,7 @@ def generate_reschedule_candidates(
     candidates: list[RescheduleCandidate] = []
     t = window_start
     while t + duration <= window_end:
-        if t != booking.start:
+        if t != booking.start and in_lab_hours(t, t + duration):
             conflict = any(_overlaps(t, t + duration, b.start, b.end) for b in others)
             if not conflict:
                 candidates.append(RescheduleCandidate(booking.booking_id, t, t + duration))
@@ -174,18 +168,23 @@ def generate_share_candidates(
 
 
 def generate_coordinate_candidates(
-    booking: Booking, all_bookings: list[Booking]
+    booking: Booking, all_bookings: list[Booking], cycle_equipment: Optional[set[str]] = None,
 ) -> list[CoordinateCandidate]:
-    """Other bookings on the same load-based equipment whose load_pct could
-    be combined with this one's (<=100% together), within a loose +/-1 day
-    window so the merge is still practically useful to the researcher."""
+    """Other bookings on the same cycle-mode equipment whose load_pct could
+    be combined with this one's (<=100% together), fully inside this
+    booking's movable window (CONTRACT.md rule 3).
+
+    `cycle_equipment` = ids with mode == "cycle" in equipment.csv; the "AUT"
+    prefix is only a fallback when no equipment data is passed (unit tests)."""
     if booking.movable == "no" or booking.load_pct is None:
         return []
-    if not booking.equipment_id.startswith(MERGEABLE_MODE_EQUIPMENT_HINT):
+    if cycle_equipment is not None:
+        if booking.equipment_id not in cycle_equipment:
+            return []
+    elif not booking.equipment_id.startswith(MERGEABLE_MODE_EQUIPMENT_HINT):
         return []
 
-    window_start = booking.start - timedelta(days=1)
-    window_end = booking.start + timedelta(days=1)
+    window_start, window_end = _movable_window(booking)
 
     out = []
     for other in all_bookings:
@@ -193,7 +192,7 @@ def generate_coordinate_candidates(
             continue
         if other.load_pct is None:
             continue
-        if not (window_start <= other.start <= window_end):
+        if not (window_start <= other.start and other.end <= window_end):
             continue
         if booking.load_pct + other.load_pct <= 100:
             out.append(CoordinateCandidate(booking.booking_id, other.booking_id))

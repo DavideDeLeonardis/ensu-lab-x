@@ -20,8 +20,10 @@ from typing import Optional
 from .domain import Booking, Equipment, fmt, lowest_confidence_label
 from .ports import CalculatorPort
 from .ranking import rank_proposals, build_suppressed_list, RankedProposal
-from .phrasing import Phraser, template_phraser
+from .phrasing import Phraser, PhraseContext, template_phraser
 from .candidates import derive_alternates
+
+MAX_HOTSPOTS = 4  # suggestion_set.schema.json: estimate.hotspots maxItems
 
 
 def _equipment_for_proposal(
@@ -43,6 +45,7 @@ def build_suggestion_set(
     muted_pairs: Optional[set[tuple[str, str]]] = None,
 ) -> dict:
     booking_by_id = {b.booking_id: b for b in request_bookings}
+    all_by_id = {b.booking_id: b for b in all_bookings}
 
     # --- overall estimate + hotspots -------------------------------------
     # Uses calc.estimate() directly (current state), separate from any
@@ -59,20 +62,26 @@ def build_suggestion_set(
         per_booking_estimate[b.booking_id]["kg"]["typ"] for b in request_bookings if b.movable == "no"
     )
 
+    # One entry per device (CONTRACT.md: bookings on the same device summed),
+    # largest first, max 4. A device is `locked` only if ALL its bookings are fixed.
+    per_device: dict[str, dict] = {}
+    for b in request_bookings:
+        d = per_device.setdefault(b.equipment_id, {"kg": 0.0, "locked": True})
+        d["kg"] += per_booking_estimate[b.booking_id]["kg"]["typ"]
+        d["locked"] = d["locked"] and b.movable == "no"
     hotspots = sorted(
         (
             {
-                "equipment_id": b.equipment_id,
-                "kg_typ": round(per_booking_estimate[b.booking_id]["kg"]["typ"], 2),
-                "share_pct": round(100 * per_booking_estimate[b.booking_id]["kg"]["typ"] / total_typ, 1)
-                if total_typ else 0.0,
-                "locked": b.movable == "no",
+                "equipment_id": eid,
+                "kg_typ": round(d["kg"], 2),
+                "share_pct": round(100 * d["kg"] / total_typ, 1) if total_typ else 0.0,
+                "locked": d["locked"],
             }
-            for b in request_bookings
+            for eid, d in per_device.items()
         ),
         key=lambda h: h["kg_typ"],
         reverse=True,
-    )
+    )[:MAX_HOTSPOTS]
 
     # --- suggestions -------------------------------------------------------
     # calc.saving() already returns saving_kg (low/typ/high) AND saving_pct
@@ -83,11 +92,20 @@ def build_suggestion_set(
                                                               # candidates.py
                                                               # until equipment.csv
                                                               # actually has rows
-    top_proposals = rank_proposals(request_bookings, all_bookings, calc, muted_pairs, alternates)
+    cycle_equipment = {eid for eid, e in equipment_by_id.items() if e.mode == "cycle"} or None
+    top_proposals = rank_proposals(request_bookings, all_bookings, calc, muted_pairs, alternates,
+                                   cycle_equipment)
     suggestions = []
     for i, proposal in enumerate(top_proposals, start=1):
         booking = booking_by_id[proposal.booking_id]
-        text = phraser(proposal)
+        alt_id = proposal.change.get("new_equipment_id")
+        ctx = PhraseContext(
+            booking=booking,
+            equipment=equipment_by_id.get(booking.equipment_id),
+            alternate=equipment_by_id.get(alt_id) if alt_id else None,
+            merge_target=all_by_id.get(proposal.change.get("merge_into_booking_id", "")),
+        )
+        text = phraser(proposal, ctx)
         equipment_involved = _equipment_for_proposal(booking, proposal, equipment_by_id)
 
         suggestions.append({
