@@ -1,0 +1,143 @@
+{
+  "request_id": "REQ-A1-2026-10-12",
+  "booking_ids": [
+    "BK-056",
+    "BK-057",
+    "BK-061",
+    "BK-069",
+    "BK-078",
+    "BK-079",
+    "BK-085",
+    "BK-090",
+    "BK-098",
+    "BK-099"
+  ],
+  "estimate": {
+    "kwh": 89.75,
+    "kg": {
+      "low": 15.79,
+      "typ": 24.9,
+      "high": 36.59
+    },
+    "hotspots": [
+      {
+        "equipment_id": "BIO-1",
+        "kg_typ": 15.94,
+        "share_pct": 64.0,
+        "locked": true
+      },
+      {
+        "equipment_id": "CONF-1",
+        "kg_typ": 2.74,
+        "share_pct": 11.0,
+        "locked": false
+      },
+      {
+        "equipment_id": "AUT-1",
+        "kg_typ": 2.05,
+        "share_pct": 8.2,
+        "locked": false
+      },
+      {
+        "equipment_id": "INC-2",
+        "kg_typ": 1.7,
+        "share_pct": 6.8,
+        "locked": true
+      },
+      {
+        "equipment_id": "BSC-1",
+        "kg_typ": 0.53,
+        "share_pct": 2.1,
+        "locked": false
+      },
+      {
+        "equipment_id": "BSC-1",
+        "kg_typ": 0.51,
+        "share_pct": 2.1,
+        "locked": false
+      },
+      {
+        "equipment_id": "BSC-1",
+        "kg_typ": 0.49,
+        "share_pct": 2.0,
+        "locked": false
+      },
+      {
+        "equipment_id": "BSC-1",
+        "kg_typ": 0.48,
+        "share_pct": 1.9,
+        "locked": false
+      },
+      {
+        "equipment_id": "BSC-1",
+        "kg_typ": 0.36,
+        "share_pct": 1.4,
+        "locked": false
+      },
+      {
+        "equipment_id": "CEN-1",
+        "kg_typ": 0.1,
+        "share_pct": 0.4,
+        "locked": false
+      }
+    ],
+    "locked_kg": 17.64
+  },
+  "suggestions": [
+    {
+      "id": "S1",
+      "type": "coordinate",
+      "booking_ids": [
+        "BK-078"
+      ],
+      "headline": "Join another group's run on this equipment",
+      "change": {
+        "merge_into_booking_id": "BK-075"
+      },
+      "saving_kg": {
+        "low": 1.436,
+        "typ": 2.052,
+        "high": 2.873
+      },
+      "saving_pct": 100.0,
+      "why": "Merging into an already-scheduled run on the same equipment saves about 2.05 kg CO2e instead of running two partial loads.",
+      "tradeoff": "Timing depends on another group's slot, and needs their agreement.",
+      "confidence": "medium",
+      "needs_other_party": true
+    },
+    {
+      "id": "S2",
+      "type": "reschedule",
+      "booking_ids": [
+        "BK-098"
+      ],
+      "headline": "Move this session to 2026-10-16 12:00",
+      "change": {
+        "new_start": "2026-10-16 12:00",
+        "new_end": "2026-10-16 16:00"
+      },
+      "saving_kg": {
+        "low": 1.155,
+        "typ": 1.925,
+        "high": 2.888
+      },
+      "saving_pct": 70.2,
+      "why": "The grid is cleaner at the new time, saving about 1.93 kg CO2e.",
+      "tradeoff": "Your booking moves to a different time slot.",
+      "confidence": "low",
+      "needs_other_party": false
+    }
+  ],
+  "suppressed": [
+    {
+      "booking_id": "BK-057",
+      "reason": "hard_constraint",
+      "detail": "Protocol timing fixed; safety interlock"
+    },
+    {
+      "booking_id": "BK-061",
+      "reason": "hard_constraint",
+      "detail": "Continuous culture: cannot be interrupted"
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+"""
+build.py: the one function the rest of the world calls.
+
+    suggestion_set = build_suggestion_set(request_id, request_bookings,
+                                           all_bookings, equipment_by_id, calc)
+
+Wires together, in order:
+  1. candidates.py    (deterministic search -- no LLM, no calculator)
+  2. ranking.py        (calculator.py numbers + Rules 1/4/7/8/9 -- no LLM)
+  3. phrasing.py        (the only step that may use an LLM)
+and produces a dict matching the SuggestionSet shape shown in CONTRACT.md.
+
+This does NOT run contract/validate.py itself -- do that separately once
+you have the real jsonschema files:
+    python3 src/contract/validate.py <output.json>
+"""
+from __future__ import annotations
+from typing import Optional
+
+from .domain import Booking, Equipment, fmt, lowest_confidence_label
+from .ports import CalculatorPort
+from .ranking import rank_proposals, build_suppressed_list, RankedProposal
+from .phrasing import Phraser, template_phraser
+from .candidates import derive_alternates
+
+
+def _equipment_for_proposal(
+    booking: Booking, proposal: RankedProposal, equipment_by_id: dict[str, Equipment]
+) -> list[Equipment]:
+    ids = {booking.equipment_id}
+    if proposal.type == "share":
+        ids.add(proposal.change["new_equipment_id"])
+    return [equipment_by_id[i] for i in ids if i in equipment_by_id]
+
+
+def build_suggestion_set(
+    request_id: str,
+    request_bookings: list[Booking],
+    all_bookings: list[Booking],
+    equipment_by_id: dict[str, Equipment],
+    calc: CalculatorPort,
+    phraser: Phraser = template_phraser,
+    muted_pairs: Optional[set[tuple[str, str]]] = None,
+) -> dict:
+    booking_by_id = {b.booking_id: b for b in request_bookings}
+
+    # --- overall estimate + hotspots -------------------------------------
+    # Uses calc.estimate() directly (current state), separate from any
+    # proposed change -- calc.saving() is only for pricing candidates below.
+    per_booking_estimate = {
+        b.booking_id: calc.estimate(b.equipment_id, fmt(b.start), fmt(b.end), shelves=b.shelves or 1)
+        for b in request_bookings
+    }
+    total_kwh = sum(e["kwh"] for e in per_booking_estimate.values())
+    total_low = sum(e["kg"]["low"] for e in per_booking_estimate.values())
+    total_typ = sum(e["kg"]["typ"] for e in per_booking_estimate.values())
+    total_high = sum(e["kg"]["high"] for e in per_booking_estimate.values())
+    locked_kg = sum(
+        per_booking_estimate[b.booking_id]["kg"]["typ"] for b in request_bookings if b.movable == "no"
+    )
+
+    hotspots = sorted(
+        (
+            {
+                "equipment_id": b.equipment_id,
+                "kg_typ": round(per_booking_estimate[b.booking_id]["kg"]["typ"], 2),
+                "share_pct": round(100 * per_booking_estimate[b.booking_id]["kg"]["typ"] / total_typ, 1)
+                if total_typ else 0.0,
+                "locked": b.movable == "no",
+            }
+            for b in request_bookings
+        ),
+        key=lambda h: h["kg_typ"],
+        reverse=True,
+    )
+
+    # --- suggestions -------------------------------------------------------
+    # calc.saving() already returns saving_kg (low/typ/high) AND saving_pct
+    # relative to that specific booking's own current footprint -- no need
+    # to recompute either here.
+    alternates = derive_alternates(equipment_by_id) or None  # None triggers
+                                                              # the fallback in
+                                                              # candidates.py
+                                                              # until equipment.csv
+                                                              # actually has rows
+    top_proposals = rank_proposals(request_bookings, all_bookings, calc, muted_pairs, alternates)
+    suggestions = []
+    for i, proposal in enumerate(top_proposals, start=1):
+        booking = booking_by_id[proposal.booking_id]
+        text = phraser(proposal)
+        equipment_involved = _equipment_for_proposal(booking, proposal, equipment_by_id)
+
+        suggestions.append({
+            "id": f"S{i}",
+            "type": proposal.type,
+            "booking_ids": [booking.booking_id],
+            "headline": text.headline,
+            "change": proposal.change,
+            "saving_kg": proposal.saving_result["saving_kg"],
+            "saving_pct": proposal.saving_result["saving_pct"],
+            "why": text.why,
+            "tradeoff": text.tradeoff,
+            "confidence": lowest_confidence_label(equipment_involved) if equipment_involved else "low",
+            "needs_other_party": proposal.needs_other_party,
+        })
+
+    return {
+        "request_id": request_id,
+        "booking_ids": [b.booking_id for b in request_bookings],
+        "estimate": {
+            "kwh": round(total_kwh, 2),
+            "kg": {"low": round(total_low, 2), "typ": round(total_typ, 2), "high": round(total_high, 2)},
+            "hotspots": hotspots,
+            "locked_kg": round(locked_kg, 2),
+        },
+        "suggestions": suggestions,
+        "suppressed": build_suppressed_list(request_bookings),
+    }
