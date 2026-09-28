@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab X booking assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!--
+  Built by src/ui/build.py from src/ui/app_template.html. Edit the template, then rebuild.
+  Reads:  SuggestionSet  (CONTRACT.md §2)
+  Emits:  BookingRequest (proposed, see src/ui/README.md) and FeedbackEvent (CONTRACT.md §4)
+  Never computes kg itself: every CO2 number shown comes from the SuggestionSet (i.e. from calculator.py).
+  Design rationale: docs/design-rationale.md.
+-->
+<style>
+:root{
+  --ground:#EDF1F0; --surface:#FFFFFF; --sunk:#F5F8F7; --ink:#13201D; --muted:#5A6A66; --line:#D2DBD8;
+  --accent:#1E5BB8; --accent-soft:#DCE7F7; --accent-ink:#FFFFFF;
+  --lock:#6B5B8C; --lock-soft:#ECE7F4;
+  --good:#2F7D55; --good-soft:#DDEFE5; --warn:#9A6A12; --warn-soft:#F6ECD5; --bad:#B23A2E; --bad-soft:#F8E1DE;
+  --lo:#3C9468; --mid:#DDA93A; --hi:#C4473A;
+  --shadow:0 1px 2px rgba(19,32,29,.06),0 4px 16px rgba(19,32,29,.05);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1513; --surface:#161F1D; --sunk:#1B2523; --ink:#E3ECE9; --muted:#95A6A1; --line:#2B3835;
+    --accent:#7AA7F0; --accent-soft:#1F3150; --accent-ink:#0E1513;
+    --lock:#B7A6DA; --lock-soft:#2A2438;
+    --good:#5FC08D; --good-soft:#18332A; --warn:#E0B550; --warn-soft:#3A2F17; --bad:#E0685A; --bad-soft:#3A1E1B;
+    --lo:#4FB07F; --mid:#E0B550; --hi:#E0685A;
+    --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1513; --surface:#161F1D; --sunk:#1B2523; --ink:#E3ECE9; --muted:#95A6A1; --line:#2B3835;
+  --accent:#7AA7F0; --accent-soft:#1F3150; --accent-ink:#0E1513;
+  --lock:#B7A6DA; --lock-soft:#2A2438;
+  --good:#5FC08D; --good-soft:#18332A; --warn:#E0B550; --warn-soft:#3A2F17; --bad:#E0685A; --bad-soft:#3A1E1B;
+  --lo:#4FB07F; --mid:#E0B550; --hi:#E0685A;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;margin:0}
+h1,h2,h3{font-family:var(--cond);font-weight:600;margin:0;text-wrap:balance}
+h1{font-size:22px} h2{font-size:18px} h3{font-size:15px}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.eyebrow{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.wrap{max-width:880px;margin:0 auto;padding:20px 16px 64px}
+header.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.steps{display:flex;gap:6px;list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.steps li{padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.steps li.on{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:18px}
+.stack>*+*{margin-top:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500;min-height:38px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+.btn.link{border:none;background:none;padding:4px 0;min-height:0;color:var(--accent);text-decoration:underline;text-underline-offset:3px;font-weight:400}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;line-height:1.4}
+.chip.lock{color:var(--lock);background:var(--lock-soft);border-color:transparent}
+.chip.type{color:var(--accent);background:var(--accent-soft);border-color:transparent;text-transform:uppercase;letter-spacing:.05em}
+.chip.good{color:var(--good);background:var(--good-soft);border-color:transparent}
+.chip.warn{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.chip.bad{color:var(--bad);background:var(--bad-soft);border-color:transparent}
+.chip.plain{color:var(--muted)}
+.chip-btn{font:inherit;font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+.chip-btn[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+
+/* booking table */
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr.new td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+tr.editing td{background:var(--sunk)}
+.tbl-wrap{overflow-x:auto;margin:0 -8px}
+select,input[type=text],input[type=number]{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:36px}
+input[type=text]{width:100%}
+
+/* booking form */
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 16px}
+.form .full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:4px}
+.field>label,.field>legend,.lbl{font-weight:500}
+.field .hint{font-size:12px;color:var(--muted)}
+.when{display:flex;gap:6px;flex-wrap:wrap}
+fieldset{border:none;margin:0;padding:0;min-width:0}
+.flex-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:4px}
+.flex-opt{position:relative;display:block;border:1px solid var(--line);border-radius:8px;padding:8px 10px 8px 34px;cursor:pointer;background:var(--surface)}
+.flex-opt input{position:absolute;left:10px;top:11px;margin:0}
+.flex-opt:has(input:checked){border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.flex-opt b{display:block;font-weight:500}
+.flex-opt span{font-size:12px;color:var(--muted)}
+.avail{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--sunk)}
+.formerr{color:var(--bad);font-size:13px}
+
+/* estimate */
+.big{font-family:var(--cond);font-size:34px;font-weight:600;line-height:1.05}
+.range{position:relative;height:30px;margin:10px 0 4px}
+.range .track{position:absolute;left:0;right:0;top:12px;height:6px;background:var(--sunk);border-radius:3px}
+.range .band{position:absolute;top:8px;height:14px;border-radius:7px;background:var(--accent-soft);border:1px solid var(--accent)}
+.range .band.after{background:var(--good-soft);border-color:var(--good)}
+.range .typ{position:absolute;top:3px;width:3px;height:24px;border-radius:2px;background:var(--accent);transform:translateX(-1px)}
+.range .typ.after{background:var(--good)}
+.axis{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.bars>*+*{margin-top:8px}
+.hrow{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:4px 12px;align-items:center}
+.bar{height:14px;border-radius:3px;background:var(--accent)}
+.bar.locked{background:repeating-linear-gradient(135deg,var(--lock) 0 4px,color-mix(in srgb,var(--lock) 55%,transparent) 4px 8px)}
+.callout{border-left:3px solid var(--lock);background:var(--lock-soft);padding:10px 12px;border-radius:0 8px 8px 0}
+.banner{border-left:3px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:0 8px 8px 0}
+.banner code{font-family:var(--mono);font-size:12px;background:var(--surface);padding:1px 5px;border-radius:4px}
+
+/* suggestion cards */
+.sugg .saving{font-family:var(--cond);font-size:22px;font-weight:600;color:var(--good);white-space:nowrap}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin-top:10px}
+.kv dt{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:2px}
+.kv dd{margin:0}
+.change{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sunk);border-radius:8px;padding:10px 12px;margin-top:12px}
+.change .from{text-decoration:line-through;text-decoration-color:var(--muted);color:var(--muted)}
+.change .arrow{color:var(--muted)}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:14px}
+.status{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:8px;margin-top:12px}
+.status.ok{background:var(--good-soft);color:var(--good)}
+.status.pending{background:var(--warn-soft);color:var(--warn)}
+.status .btn.link{color:inherit}
+.sugg.collapsed{padding:12px 18px}
+.editor{margin-top:12px;border:1px dashed var(--line);border-radius:8px;padding:12px}
+textarea{width:100%;font:inherit;padding:8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);resize:vertical}
+
+/* grid strip */
+.strip{width:100%;height:auto;display:block;margin-top:10px}
+.strip text{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:4px}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+
+/* about / explain */
+.about{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px 22px}
+.about h3{margin-bottom:4px}
+.about ul{margin:0;padding-left:18px}
+.roles{display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+.roles dt{font-weight:600}
+.roles dd{margin:0}
+.src-tbl td,.src-tbl th{font-size:13px}
+
+details.disclose{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;color:var(--accent)}
+pre{font-family:var(--mono);font-size:12px;background:var(--sunk);border-radius:8px;padding:12px;overflow:auto;max-height:320px;margin:8px 0 0}
+.sticky{position:sticky;bottom:0;background:color-mix(in srgb,var(--ground) 90%,transparent);backdrop-filter:blur(6px);padding:12px 0;margin-top:18px;border-top:1px solid var(--line)}
+.consent{display:flex;gap:8px;align-items:flex-start;font-size:13px;max-width:430px}
+.consent input{margin-top:3px}
+.placeholder{border:1.5px dashed var(--line);border-radius:8px;padding:12px 14px;margin-top:10px;color:var(--muted);display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.warnbox{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:560px){
+  .hrow{grid-template-columns:1fr auto}
+  .hrow .bar-cell{grid-column:1/-1;order:3}
+  .big{font-size:28px}
+  .form{grid-template-columns:1fr}
+  .hide-sm{display:none}
+  .req-tbl thead{display:none}
+  .req-tbl tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"dev act" "when when" "flex flex";padding:10px 0;border-bottom:1px solid var(--line)}
+  .req-tbl tr:last-child{border-bottom:none}
+  .req-tbl td{border:none;padding:2px 8px}
+  .req-tbl td:nth-child(1){grid-area:dev} .req-tbl td:nth-child(2){grid-area:when} .req-tbl td:nth-child(3){grid-area:flex} .req-tbl td:nth-child(4){grid-area:act}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Lab X · booking assistant</div>
+      <h1 id="title">Your bookings</h1>
+      <div class="row" style="gap:12px"><span id="mode" class="chip plain">demo data</span>
+      <button class="btn link" data-about aria-expanded="false" aria-controls="about">What is this assistant, and who decides what?</button></div>
+    </div>
+    <ol class="steps" aria-label="Progress">
+      <li data-step="1">1 Plan</li><li data-step="2">2 Review</li><li data-step="3">3 Done</li>
+    </ol>
+  </header>
+  <section id="about" class="card" hidden style="margin-bottom:14px"></section>
+  <main id="app" aria-live="polite"></main>
+
+  <details class="disclose" style="margin-top:32px">
+    <summary>Developer: load another SuggestionSet</summary>
+    <div class="stack" style="margin-top:10px">
+      <p class="muted">Pick a file from the AI layer (or from <code>src/ui/price_request.py</code>) to see how it renders. The page checks it against the contract and warns about anything the UI would have to work around.</p>
+      <input type="file" id="loader" accept="application/json,.json">
+      <div id="loadmsg"></div>
+    </div>
+  </details>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const LAB = DATA.lab;
+let SSET = DATA.suggestion_set;
+/* Live mode: served by src/ui/serve.py → the real engine prices every request and feedback is saved.
+   Opened as a file → the baked-in SuggestionSet is used and nothing is saved. */
+let LIVE = false, MUTED = [];
+/* Demo switch (build.py / serve.py --placeholders): explanation panels open but show a "to be filled in" box */
+const PLACEHOLDERS = !!DATA.placeholders;
+const placeholder = what => `<div class="placeholder" role="note"><span class="chip plain">to be filled in</span>
+  <p>This explanation will be added later. It will cover ${esc(what)}.</p></div>`;
+
+/* ---------- helpers ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const parse = ts => { const [d, t] = ts.split(" "); const [Y, M, D] = d.split("-").map(Number); const [h, m] = t.split(":").map(Number); return Date.UTC(Y, M - 1, D, h, m); };
+const fmtTs = ms => { const d = new Date(ms); const p = n => String(n).padStart(2, "0"); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`; };
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const dayName = ms => DAYS[new Date(ms).getUTCDay()];
+const hhmm = ms => fmtTs(ms).slice(11);
+const dayLabel = ms => `${dayName(ms)} ${new Date(ms).getUTCDate()} Oct`;
+const slot = (s, e) => { const a = parse(s), b = parse(e); const sameDay = fmtTs(a).slice(0,10) === fmtTs(b).slice(0,10) || (b - a <= 24*3600e3 && hhmm(b) === "00:00");
+  const dn = t => `${dayName(t)} ${new Date(t).getUTCDate()}`;
+  return sameDay ? `${dayName(a)} ${hhmm(a)}–${hhmm(b)}` : `${dn(a)} ${hhmm(a)} → ${dn(b)} ${hhmm(b)}`; };
+const kg = (x, d = 1) => Number(x).toFixed(d);
+const HOUR = 3600e3, DAY = 24 * HOUR, EPOCH = parse(LAB.epoch + " 00:00"), DATA_END = EPOCH + LAB.days * DAY;
+const dayStart = ms => ms - (ms - EPOCH) % DAY;
+/* mirror of src/contract/rules.py: the tool only proposes Mon–Fri, fully inside 08:00–20:00 */
+const LAB_OPEN = 8, LAB_CLOSE = 20;
+const isWeekday = ms => { const d = new Date(ms).getUTCDay(); return d >= 1 && d <= 5; };
+const inLabHours = (s, e) => isWeekday(s) && dayStart(s) === dayStart(e - 1) && new Date(s).getUTCHours() >= LAB_OPEN && e <= dayStart(s) + LAB_CLOSE * HOUR;
+const gridAt = ms => LAB.grid[Math.floor((ms - EPOCH) / HOUR)];
+const gridAvg = (a, b) => { let s = 0, n = 0; for (let t = a; t < b; t += HOUR) { const v = gridAt(t); if (v != null) { s += v; n++; } } return n ? s / n : null; };
+const EQ = LAB.equipment;
+const eqName = id => EQ[id]?.name ?? id;
+const shortEq = id => eqName(id).replace(/\s*\(.*\)$/, "");
+const nowTs = () => { const d = new Date(); const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+
+const TYPE_LABEL = {reschedule: "Reschedule", share: "Share", coordinate: "Coordinate"};
+const CONF_LABEL = {high: "measured values", medium: "derived values", low: "team estimates"};
+const EQ_CONF = {measured: ["good", "measured"], derived: ["plain", "derived"], estimate: ["warn", "team estimate"]};
+const SRC_SHORT = {TRAN2026: "Tran et al. 2026", MGL: "My Green Lab", ASSUMED: "Team assumption", EMAPS: "Electricity Maps"};
+const MOVABLE = [
+  ["within day", "Same day", "Any time that day"],
+  ["±1 day", "± 1 day", "The day before or after is fine"],
+  ["within week", "Same week", "Any day this week"],
+  ["no", "Fixed", "Can't move (protocol, safety…)"],
+];
+const MOVABLE_LABEL = Object.fromEntries(MOVABLE.map(([v, l]) => [v, l]));
+const SUPP_LABEL = {
+  hard_constraint: "Fixed by your protocol",
+  muted_by_user_feedback: "Muted: your lab turned this suggestion down several times",
+  saving_below_threshold: "Saving too small to be worth your time",
+  disabled_by_lab_manager: "Turned off by the lab manager",
+};
+const REASONS = [
+  ["time_sensitive_sample", "Sample is time-sensitive"],
+  ["protocol_constraint", "Protocol doesn't allow it"],
+  ["not_available_then", "I'm not available then"],
+  ["estimate_looks_wrong", "Estimate looks wrong"],
+  ["other", "Other"],
+];
+const REQ_FIELDS = ["booking_id", "equipment_id", "start", "end", "purpose", "movable", "constraint", "load_pct", "shelves"];
+
+/* ---------- state ---------- */
+/* The plan starts from the last confirmed plan (live mode, data/confirmed_bookings.csv) or else the demo request */
+let SAVED_PLAN = null;
+const demoRequest = () => LAB.request_order.map(id => ({...LAB.bookings[id]}));
+const initialRequest = () => SAVED_PLAN ? SAVED_PLAN.map(b => ({...b})) : demoRequest();
+const nextIdFor = req => Math.max(900, ...req.map(b => +(b.booking_id.match(/^BK-(9\d\d)$/)?.[1] ?? 0))) + 1;
+function normalizePlan(rows) {
+  return rows.map(r => ({...Object.fromEntries(REQ_FIELDS.map(k => [k, r[k] ?? ""])), own: true,
+                         isNew: !LAB.bookings[r.booking_id]?.own}));
+}
+/* Feedback carries no identity: a random id per priced request (instead of "REQ-A1-…") and the date only */
+const anonId = () => "REQ-" + Array.from(crypto.getRandomValues(new Uint8Array(4)), x => x.toString(16).padStart(2, "0")).join("");
+let ANON_REQ = anonId();
+const dayTs = () => nowTs().slice(0, 10) + " 00:00";
+const sig = req => JSON.stringify(req.map(b => REQ_FIELDS.map(k => b[k] ?? "")));
+let state;
+function resetReview() {
+  Object.assign(state, {dec: {}, flags: [], flagOpen: null, whyOpen: false, sent: null, share: false, skipped: false,
+                        saved: null, saveError: null, booked: null, bookError: null});
+}
+function resetAll() {
+  state = {step: 1, request: initialRequest(), form: null, busy: false, apiError: null, serverErrors: [], undoDel: null};
+  state.nextId = nextIdFor(state.request);
+  state.pricedFor = sig(demoRequest());   // the baked-in SuggestionSet was made for the demo request
+  resetReview();
+}
+resetAll();
+
+/* bookings: the researcher's (possibly edited) request first, then everything else in the lab */
+const bk = id => state.request.find(b => b.booking_id === id) ?? LAB.bookings[id];
+const isDirty = () => sig(state.request) !== state.pricedFor;
+
+/* movable window → [start, end) in ms: same definitions as src/contract/rules.py (CONTRACT.md rule 3) */
+function windowFor(b) {
+  const day0 = dayStart(parse(b.start));
+  switch (b.movable) {
+    case "within day": return [day0, day0 + DAY];
+    case "±1 day": return [parse(b.start) - DAY, parse(b.end) + DAY];
+    case "within week": { const dow = (new Date(day0).getUTCDay() + 6) % 7; const mon = day0 - dow*DAY; return [mon, mon + 7*DAY]; }
+    default: return [parse(b.start), parse(b.end)];
+  }
+}
+
+/* ---------- BookingRequest (proposed contract §1 as JSON) ---------- */
+function requestJson() {
+  return {request_id: SSET.request_id || "REQ-A1-2026-10-12", group: "A", researcher: "A1",
+          bookings: state.request.map(b => Object.fromEntries(REQ_FIELDS.map(k => [k, b[k] ?? ""])))};
+}
+
+/* ---------- the plan that gets booked on Confirm ---------- */
+function finalPlan() {
+  const plan = state.request.map(b => ({...b})), drop = new Set();
+  if (!state.skipped) for (const s of SSET.suggestions) {
+    const d = state.dec[s.id];
+    if (!d?.action || d.action === "reject" || d.action === "flag_error") continue;
+    if (d.action === "accept" && s.needs_other_party) continue;   // pending: stays as booked until the other group agrees
+    const b = plan.find(x => x.booking_id === s.booking_ids[0]); if (!b) continue;
+    const c = d.action === "modify" ? d.modified_change : s.change;
+    if (c.merge_into_booking_id) { drop.add(b.booking_id); continue; }   // merged into one of your own runs
+    if (c.new_start) { b.start = c.new_start; b.end = c.new_end; }
+    if (c.new_equipment_id) b.equipment_id = c.new_equipment_id;
+  }
+  return plan.filter(b => !drop.has(b.booking_id)).sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/* ---------- FeedbackEvents (CONTRACT.md §4) ---------- */
+function mainEquipment(s) { return bk(s.booking_ids[0])?.equipment_id ?? "unknown"; }
+function buildEvents() {
+  const ev = [];
+  for (const s of SSET.suggestions) {
+    const d = state.dec[s.id];
+    if (!d || !d.action) continue;
+    const e = {request_id: ANON_REQ, suggestion_id: s.id, suggestion_type: s.type,
+               equipment_id: mainEquipment(s), action: d.action, timestamp: d.ts};
+    if (d.action === "reject" && d.reason) e.reason = d.reason;
+    if (d.action === "modify") e.modified_change = d.modified_change;
+    ev.push(e);
+  }
+  ev.push(...state.flags);
+  ev.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  ev.forEach((e, i) => e.event_id = "FB-" + String(i + 1).padStart(4, "0"));
+  return ev.map(e => Object.fromEntries(["event_id","request_id","suggestion_id","suggestion_type","equipment_id","action","reason","comment","modified_change","timestamp"].filter(k => e[k] !== undefined).map(k => [k, e[k]])));
+}
+
+/* ---------- estimate after the researcher's choices (subtracts calculator savings; never invents kg) ---------- */
+function after() {
+  const k = SSET.estimate.kg; let low = k.low, typ = k.typ, high = k.high, pending = 0, recalc = 0;
+  for (const s of SSET.suggestions) {
+    const d = state.dec[s.id];
+    if (!d) continue;
+    if (d.action === "accept" && !s.needs_other_party) { low -= s.saving_kg.low; typ -= s.saving_kg.typ; high -= s.saving_kg.high; }
+    if (d.action === "accept" && s.needs_other_party) pending += s.saving_kg.typ;
+    if (d.action === "modify") recalc++;
+  }
+  return {low, typ, high, pending, recalc, changed: typ !== k.typ};
+}
+
+/* ---------- hotspots: aggregate per device (defensive: AI output may list one row per booking) ---------- */
+function hotspots() {
+  const m = new Map();
+  for (const h of SSET.estimate.hotspots) {
+    const cur = m.get(h.equipment_id) ?? {equipment_id: h.equipment_id, kg_typ: 0, share_pct: 0, locked: true};
+    cur.kg_typ += h.kg_typ; cur.share_pct += h.share_pct; cur.locked = cur.locked && !!h.locked;
+    m.set(h.equipment_id, cur);
+  }
+  const top = [...m.values()].sort((a, b) => b.kg_typ - a.kg_typ).slice(0, 4);
+  const other = SSET.estimate.kg.typ - top.reduce((s, h) => s + h.kg_typ, 0);
+  return {top, other: other > 0.05 ? other : 0};
+}
+
+/* ---------- render ---------- */
+let lastStep = 0;
+function render() {
+  const focusId = document.activeElement?.id;
+  const openPanels = [...document.querySelectorAll("#app details[open][id]")].map(d => d.id);
+  document.querySelectorAll(".steps li").forEach(li => {
+    const on = +li.dataset.step === state.step;
+    li.classList.toggle("on", on);
+    if (on) li.setAttribute("aria-current", "step"); else li.removeAttribute("aria-current");
+  });
+  const days = state.request.map(b => parse(b.start));
+  $("#title").textContent = days.length
+    ? `Your bookings, ${new Date(Math.min(...days)).getUTCDate()}–${new Date(Math.max(...days)).getUTCDate()} Oct` : "Your bookings";
+  $("#app").innerHTML = state.step === 1 ? viewPlan() : state.step === 2 ? viewReview() : viewDone();
+  if (state.step !== lastStep) { window.scrollTo({top: 0}); lastStep = state.step; }
+  openPanels.forEach(id => document.getElementById(id)?.setAttribute("open", ""));
+  if (focusId && document.getElementById(focusId)) document.getElementById(focusId).focus();
+}
+
+/* ====================================================================================
+   About panel: what the assistant is for, what it never does, who decides what.
+   (Users should be able to recognise the nudge, know who benefits, and know who is responsible for what.)
+   ==================================================================================== */
+function viewAbout() {
+  if (PLACEHOLDERS) return `<div class="spread" style="margin-bottom:12px"><h2>About this assistant</h2><button class="btn link" data-about>Close</button></div>
+    ${placeholder("what the assistant is for, what it never does, who decides what, how suggestions are made, and how sure the numbers are")}`;
+  return `<div class="spread" style="margin-bottom:12px"><h2>About this assistant</h2><button class="btn link" data-about>Close</button></div>
+  <div class="about">
+    <div><h3>What it's for</h3>
+      <p>A student prototype, not an official TU/e tool. It estimates the CO₂ of the equipment you book and points out changes of <em>time, device or batching</em> that lower it. The goal is a lower footprint for the lab. It doesn't score or rank you.</p></div>
+    <div><h3>What it never does</h3>
+      <ul><li>Change your protocol or experiment</li><li>Touch bookings you marked fixed</li><li>Book or move anything without your click</li><li>Name or compare groups and researchers</li><li>Store who you are with your feedback</li></ul></div>
+    <div><h3>Who decides what</h3>
+      <dl class="roles">
+        <dt>You</dt><dd>Every change to your bookings, and you're responsible for them. Ignoring all suggestions is fine.</dd>
+        <dt>Other group</dt><dd>Whether to share a cycle with you. They can decline without a reason.</dd>
+        <dt>Lab manager</dt><dd>Reviews numbers you report as wrong; can switch suggestion types off.</dd>
+        <dt>Project team</dt><dd>The device values and sources behind every number.</dd>
+      </dl></div>
+    <div><h3>How suggestions are made</h3>
+      <p>By fixed, readable rules, not a trained model: list possible moves inside your flexibility and lab hours → price each with the lab's calculator → drop anything that touches fixed bookings or saves under 0.2 kg → keep the best 3. The text on each card is filled in from those same numbers by templates, so the explanation is what the tool actually did.</p></div>
+    <div><h3>How sure are the numbers?</h3>
+      <p>Every figure is a range. Each device is labelled <span class="chip good">measured</span>, <span class="chip plain">derived</span> or <span class="chip warn">team estimate</span>, and suggestions show the lowest label involved. The grid curve in this prototype is synthetic.</p></div>
+  </div>`;
+}
+
+/* ====================================================================================
+   Screen 1: plan. Create, edit, remove bookings. The researcher enters booking fields only
+   (CONTRACT.md §1). No CO₂ is shown here: the UI never computes kg.
+   ==================================================================================== */
+function viewPlan() {
+  const dirty = isDirty();
+  const rows = state.request.map(b => {
+    const fixed = b.movable === "no", editing = state.form?.id === b.booking_id;
+    const extra = b.load_pct ? ` · load ${b.load_pct}%` : "";
+    return `<tr class="${b.isNew ? "new" : ""} ${editing ? "editing" : ""}">
+      <td><strong>${esc(shortEq(b.equipment_id))}</strong>${b.isNew ? ` <span class="chip type">new</span>` : ""}
+        <div class="muted small">${esc(b.purpose || "No purpose given")}${extra}</div></td>
+      <td class="mono" style="white-space:nowrap">${esc(slot(b.start, b.end))}</td>
+      <td>${fixed
+        ? `<span class="chip lock">🔒 Fixed</span>${b.constraint ? `<div class="muted small" style="margin-top:4px">${esc(b.constraint)}</div>` : ""}`
+        : `<span class="chip plain">${esc(MOVABLE_LABEL[b.movable])}</span>`}</td>
+      <td style="text-align:right;white-space:nowrap"><button class="btn link" data-edit="${b.booking_id}" aria-label="Edit ${esc(shortEq(b.equipment_id))} ${esc(slot(b.start, b.end))}">Edit</button>
+        · <button class="btn link" data-del="${b.booking_id}" aria-label="Delete ${esc(shortEq(b.equipment_id))} ${esc(slot(b.start, b.end))}">Delete</button></td>
+    </tr>`;
+  }).join("");
+
+  return `<div class="stack">
+    ${state.form?.id === "__new__" ? bookingForm() : ""}
+    ${state.undoDel ? `<div class="status ok" role="status" style="margin-top:0">Deleted <strong class="mono">${esc(shortEq(state.undoDel.row.equipment_id))} · ${esc(slot(state.undoDel.row.start, state.undoDel.row.end))}</strong>.<button class="btn link" data-undodel>Undo</button></div>` : ""}
+    ${SAVED_PLAN ? `<p class="muted small">Showing your last confirmed plan.</p>` : ""}
+    <div class="card stack">
+      <div class="spread">
+        <h2>Booking request</h2>
+        <div class="row"><span class="muted">${state.request.length} booking${state.request.length === 1 ? "" : "s"}${LAB.own_group ? ` · ${esc(LAB.own_group)}` : ""}</span>
+          ${state.form ? "" : `<button class="btn" data-new>+ New booking</button>`}</div>
+      </div>
+      <p class="muted">For each booking, say how far it could move. The assistant only looks at time, device and batching, never at your protocol, and it won't touch anything marked fixed.</p>
+      ${state.request.length ? `<div class="tbl-wrap"><table class="req-tbl">
+        <thead><tr><th>Device</th><th>When</th><th>Flexibility</th><th><span class="sr">Actions</span></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>` : `<p>No bookings yet. Add one to get started.</p>`}
+    </div>
+    ${state.form && state.form.id !== "__new__" ? bookingForm() : ""}
+    ${state.apiError ? `<div class="warnbox" role="alert">Couldn't reach the engine: ${esc(state.apiError)}</div>` : ""}
+    ${dirty && !LIVE ? `<div class="banner stack">
+      <p><strong>Your request changed since the last estimate.</strong> In the real tool it's re-priced automatically. In this prototype, run it through the calculator yourself:</p>
+      <p class="small">1. <button class="btn link" data-dlreq>Download request.json</button> &nbsp; 2. <code>python3 src/ui/price_request.py request.json -o mine.json</code> &nbsp; 3. Load <code>mine.json</code> under "Developer" at the bottom.</p>
+    </div>` : ""}
+    <div class="sticky row" style="justify-content:flex-end">
+      <button class="btn" data-go="skip" ${state.request.length ? "" : "disabled"}>Book without checking</button>
+      <button class="btn primary" data-go="2" ${state.request.length && !state.form && !state.busy ? "" : "disabled"}>${state.busy ? "Checking…" : "Check footprint"}</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- the booking form (new or edit) ---------- */
+function blankDraft() {
+  const d0 = dayStart(parse("2026-10-12 00:00"));
+  return {equipment_id: "", sday: d0, stime: "09:00", eday: d0, etime: "12:00", purpose: "",
+          movable: "within day", constraint: "", load_pct: "", shelves: "1"};
+}
+function draftFrom(b) {
+  const s = parse(b.start), e = parse(b.end);
+  return {equipment_id: b.equipment_id, sday: dayStart(s), stime: hhmm(s), eday: e === dayStart(e) ? dayStart(e) - DAY : dayStart(e),
+          etime: e === dayStart(e) ? "24:00" : hhmm(e), purpose: b.purpose ?? "", movable: b.movable,
+          constraint: b.constraint ?? "", load_pct: String(b.load_pct ?? ""), shelves: String(b.shelves || "1")};
+}
+const toMs = (day, t) => day + (+t.slice(0, 2)) * HOUR + (+t.slice(3)) * 60e3;
+function draftTimes(d) { return [toMs(+d.sday, d.stime), toMs(+d.eday, d.etime)]; }
+
+/* availability: other bookings on the same device (never says whose) */
+function availability(d, selfId) {
+  const e = EQ[d.equipment_id]; if (!e) return null;
+  const [s, t] = draftTimes(d); if (!(t > s)) return null;
+  const pool = [...Object.values(LAB.bookings).filter(b => !b.own), ...state.request];
+  const overlapping = pool.filter(b => b.booking_id !== selfId && b.equipment_id === d.equipment_id && parse(b.start) < t && parse(b.end) > s);
+  if (e.mode === "shelf") {
+    const used = overlapping.reduce((n, b) => n + (+b.shelves || 1), 0), cap = e.shelves || 4, want = +d.shelves || 1;
+    return used + want <= cap ? {ok: true, msg: `${cap - used} of ${cap} shelves free`} : {ok: false, msg: `Only ${Math.max(0, cap - used)} of ${cap} shelves free at some point in this period`};
+  }
+  if (e.mode === "day") return overlapping.length ? {ok: true, msg: "Already running then, so you'd share it"} : {ok: true, msg: "Free"};
+  return overlapping.length
+    ? {ok: false, msg: `Already booked at ${overlapping.map(b => slot(b.start, b.end)).join(", ")}`}
+    : {ok: true, msg: "Free at this time"};
+}
+
+function formError(d, selfId) {
+  if (!d.equipment_id) return "Pick a device.";
+  const [s, t] = draftTimes(d);
+  if (!(t > s)) return "The end has to be after the start.";
+  if (s < EPOCH || t > DATA_END) return "This prototype only has data for 5–18 Oct.";
+  const a = availability(d, selfId);
+  if (a && !a.ok) return a.msg + ". Pick another time or device.";
+  return null;
+}
+
+function bookingForm() {
+  const f = state.form, d = f.draft, isNew = f.id === "__new__";
+  const e = EQ[d.equipment_id];
+  const byRoom = {};
+  for (const [id, q] of Object.entries(EQ)) if (q.bookable) (byRoom[q.room] ??= []).push([id, q]);
+  const devOpts = Object.entries(byRoom).map(([room, list]) => `<optgroup label="${esc(LAB.rooms[room] ?? room)}">${
+    list.map(([id, q]) => `<option value="${id}" ${d.equipment_id === id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</optgroup>`).join("");
+  const days = []; for (let t = EPOCH; t < DATA_END; t += DAY) days.push(t);
+  const times = []; for (let m = 0; m < 24*60; m += 30) times.push(`${String(m/60|0).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`);
+  const dayOpts = sel => days.map(t => `<option value="${t}" ${t === +sel ? "selected" : ""}>${dayLabel(t)}</option>`).join("");
+  const timeOpts = (sel, withEnd) => [...times, ...(withEnd ? ["24:00"] : [])].map(t => `<option ${t === sel ? "selected" : ""}>${t}</option>`).join("");
+  const avail = availability(d, f.id);
+  const err = f.showErr ? formError(d, f.id) : null;
+
+  return `<section class="card stack" aria-labelledby="form-h">
+    <div class="spread"><h2 id="form-h">${isNew ? "New booking" : "Edit booking"}</h2><button class="btn link" data-fcancel>Cancel</button></div>
+    <div class="form">
+      <div class="field full"><label for="f-eq">Device</label>
+        <select id="f-eq" data-f="equipment_id"><option value="">Choose a device…</option>${devOpts}</select>
+        ${e ? `<span class="hint">${esc(LAB.rooms[e.room] ?? "")}${e.mode === "cycle" ? " · counted per cycle" : e.mode === "shelf" ? " · counted per shelf" : ""}</span>` : ""}</div>
+      <div class="field"><span class="lbl" id="f-start-l">Start</span>
+        <div class="when" role="group" aria-labelledby="f-start-l">
+          <select id="f-sday" data-f="sday" aria-label="Start day">${dayOpts(d.sday)}</select>
+          <select id="f-stime" data-f="stime" aria-label="Start time">${timeOpts(d.stime)}</select></div></div>
+      <div class="field"><span class="lbl" id="f-end-l">End</span>
+        <div class="when" role="group" aria-labelledby="f-end-l">
+          <select id="f-eday" data-f="eday" aria-label="End day">${dayOpts(d.eday)}</select>
+          <select id="f-etime" data-f="etime" aria-label="End time">${timeOpts(d.etime, true)}</select></div></div>
+      ${e?.mode === "cycle" ? `<div class="field"><label for="f-load">Load</label>
+        <select id="f-load" data-f="load_pct">${["", ...Array.from({length: 10}, (_, i) => String((i + 1) * 10))].map(v => `<option value="${v}" ${v === d.load_pct ? "selected" : ""}>${v ? v + "% full" : "Not sure"}</option>`).join("")}</select>
+        <span class="hint">Lets the assistant see whether cycles could be combined.</span></div>` : ""}
+      ${e?.mode === "shelf" ? `<div class="field"><label for="f-shelves">Shelves</label>
+        <select id="f-shelves" data-f="shelves">${Array.from({length: e.shelves || 4}, (_, i) => `<option ${String(i + 1) === d.shelves ? "selected" : ""}>${i + 1}</option>`).join("")}</select></div>` : ""}
+      <div class="field full"><label for="f-purpose">Purpose <span class="muted" style="font-weight:400">(optional, only you see it)</span></label>
+        <input type="text" id="f-purpose" data-f="purpose" maxlength="80" value="${esc(d.purpose)}" placeholder="e.g. Medium change"></div>
+      <fieldset class="field full"><legend>How flexible is this booking?</legend>
+        <div class="flex-opts">${MOVABLE.map(([v, l, h]) => `<label class="flex-opt"><input type="radio" name="f-mv" id="f-mv-${v.replace(/\W/g, "")}" data-f="movable" value="${v}" ${d.movable === v ? "checked" : ""}><b>${l}</b><span>${h}</span></label>`).join("")}</div>
+        <span class="hint">The assistant will never suggest moving a booking beyond what you pick here.</span></fieldset>
+      ${d.movable === "no" ? `<div class="field full"><label for="f-constraint">Why is it fixed? <span class="muted" style="font-weight:400">(optional)</span></label>
+        <input type="text" id="f-constraint" data-f="constraint" maxlength="100" value="${esc(d.constraint)}" placeholder="e.g. Continuous culture, can't be interrupted">
+        <span class="hint">Shown back to you as the reason the assistant left it alone.</span></div>` : ""}
+    </div>
+    ${avail ? `<div class="avail"><span class="chip ${avail.ok ? "good" : "bad"}">${avail.ok ? "available" : "conflict"}</span><span>${esc(avail.msg)}</span></div>` : ""}
+    ${(() => { const [a, z] = draftTimes(d); return z > a && z - a <= DAY && !inLabHours(a, z)
+      ? `<p class="muted small">Outside lab hours (Mon–Fri ${LAB_OPEN}:00–${LAB_CLOSE}:00). That's allowed; the assistant just never proposes such times.</p>` : ""; })()}
+    ${dayStrip(d)}
+    ${err ? `<p class="formerr" role="alert">${esc(err)}</p>` : ""}
+    <div class="row">
+      <button class="btn primary" data-fsave>${isNew ? "Add booking" : "Save changes"}</button>
+      ${isNew ? "" : `<button class="btn danger" data-fdelete>Remove booking</button>`}
+    </div>
+  </section>`;
+}
+
+/* ====================================================================================
+   Screen 2: review. Estimate, where it comes from, how it is calculated, suggestions.
+   ==================================================================================== */
+function rangeBar(k, max, cls = "") {
+  const pct = v => Math.max(0, Math.min(100, v / max * 100));
+  return `<div class="range" role="img" aria-label="Between ${kg(k.low)} and ${kg(k.high)} kg, most likely ${kg(k.typ)} kg">
+    <div class="track"></div>
+    <div class="band ${cls}" style="left:${pct(k.low)}%;width:${pct(k.high) - pct(k.low)}%"></div>
+    <div class="typ ${cls}" style="left:${pct(k.typ)}%"></div>
+  </div>`;
+}
+
+/* Explanation: how the number is made, and what each device value rests on */
+function howCalculated() {
+  const ids = [...new Set(state.request.map(b => b.equipment_id))];
+  const tf = SSET.tool_footprint_g;
+  if (PLACEHOLDERS) return `<details class="disclose" id="d-howcalc"><summary>How is this calculated?</summary>
+    ${placeholder("the formula behind the estimate, what each device's value is based on, how reliable it is, and the sources")}</details>`;
+  return `<details class="disclose" id="d-howcalc"><summary>How is this calculated?</summary>
+    <div class="stack" style="margin-top:10px">
+      <p>For every 15 minutes of each booking: <strong>device power × grid CO₂ per kWh at that hour</strong>, added up. The range uses each device's uncertainty. Confocal sessions include laser warm-up; autoclave cycles count 6 kWh however full they are; incubator shelves carry their share of the unit's daily energy.</p>
+      <div class="tbl-wrap"><table class="src-tbl">
+        <thead><tr><th>Device</th><th>Value based on</th><th>Type</th><th class="hide-sm">Source</th></tr></thead>
+        <tbody>${ids.map(id => { const q = EQ[id]; if (!q) return ""; const [c, l] = EQ_CONF[q.confidence] ?? ["plain", q.confidence];
+          return `<tr><td>${esc(shortEq(id))}</td><td class="small">${esc(q.basis)}</td><td><span class="chip ${c}">${l}</span></td><td class="small hide-sm">${esc(SRC_SHORT[q.source] ?? q.source)}</td></tr>`; }).join("")}</tbody>
+      </table></div>
+      <p class="small muted">Grid intensity: hourly curve for the Netherlands, shaped on Electricity Maps' 2025 review (values synthetic in this prototype).
+        ${tf != null ? ` This check itself used ≈ ${kg(tf, 1)} g CO₂e.` : ` The assistant's own footprint isn't reported yet (planned: Green Algorithms estimate per check).`}</p>
+    </div>
+  </details>`;
+}
+
+function viewReview() {
+  const E = SSET.estimate, A = after(), max = Math.ceil(E.kg.high * 1.1 / 5) * 5;
+  const H = hotspots(), hmax = Math.max(...H.top.map(h => h.kg_typ), H.other);
+  const lockedPct = Math.round(E.locked_kg / E.kg.typ * 100);
+  const lockedNames = H.top.filter(h => h.locked).map(h => shortEq(h.equipment_id).toLowerCase());
+
+  const stale = isDirty() ? `<div class="banner stack">
+      <p><strong>This estimate is for an earlier version of your request.</strong> You added, edited or removed bookings, so the numbers and suggestions below may not match. In the real tool this is re-priced automatically.</p>
+      <p class="small"><button class="btn link" data-dlreq>Download request.json</button> → <code>python3 src/ui/price_request.py request.json -o mine.json</code> → load it under "Developer".</p>
+    </div>` : "";
+
+  const estimate = `<section class="card stack" aria-labelledby="est-h">
+    <div class="spread">
+      <div><div class="eyebrow" id="est-h">Estimated footprint of this request</div>
+        <div class="big mono">${kg(E.kg.low,0)}–${kg(E.kg.high,0)} <span style="font-size:18px">kg CO₂e</span></div>
+        <div class="muted">most likely ≈ ${kg(E.kg.typ)} kg · ${kg(E.kwh,0)} kWh of electricity</div></div>
+      ${A.changed ? `<div style="text-align:right"><div class="eyebrow">With your choices</div>
+        <div class="big mono" style="color:var(--good)">≈ ${kg(A.typ)}</div>
+        <div class="muted">${kg(A.low)}–${kg(A.high)} kg</div></div>` : ""}
+    </div>
+    <div>${rangeBar(E.kg, max)}${A.changed ? rangeBar(A, max, "after") : ""}
+      <div class="axis"><span>0</span><span>${max / 2}</span><span>${max} kg</span></div></div>
+    ${A.pending ? `<p class="muted">+ up to ${kg(A.pending)} kg more if the other group agrees to share.</p>` : ""}
+    ${A.recalc ? `<p class="muted">${A.recalc} adjusted booking${A.recalc>1?"s":""} will be re-priced by the calculator when you confirm.</p>` : ""}
+    <p class="muted small">A range, not a single number: device power figures are uncertain, and grid intensity changes by the hour.</p>
+    ${howCalculated()}
+  </section>`;
+
+  const bars = H.top.map(h => `<div class="hrow">
+      <div><div>${esc(shortEq(h.equipment_id))}</div>${h.locked ? `<span class="chip lock">🔒 fixed</span>` : ""}</div>
+      <div class="bar-cell"><div class="bar ${h.locked ? "locked" : ""}" style="width:${h.kg_typ / hmax * 100}%"></div></div>
+      <div class="mono" style="text-align:right">${kg(h.kg_typ)} kg <span class="muted">${Math.round(h.share_pct)}%</span></div></div>`).join("")
+    + (H.other ? `<div class="hrow"><div class="muted">Everything else</div><div class="bar-cell"><div class="bar" style="width:${H.other / hmax * 100}%;opacity:.35"></div></div><div class="mono" style="text-align:right">${kg(H.other)} kg</div></div>` : "");
+
+  const breakdown = `<section class="card stack" aria-labelledby="hs-h">
+    <h2 id="hs-h">Where it comes from</h2>
+    <div class="bars">${bars}</div>
+    ${E.locked_kg > 0 ? `<div class="callout"><strong>${kg(E.locked_kg)} kg (${lockedPct}%) is fixed by your protocol</strong>${lockedNames.length ? `, mainly the ${esc(lockedNames.join(" and "))}` : ""}. The assistant doesn't suggest changes to it. ${SSET.suppressed.length ? `<button class="btn link" data-why>${state.whyOpen ? "Hide" : "What wasn't touched, and why?"}</button>` : ""}</div>` : ""}
+    ${state.whyOpen ? suppressedList() : ""}
+  </section>`;
+
+  const suggs = SSET.suggestions.length
+    ? SSET.suggestions.map(suggCard).join("")
+    : `<div class="card"><p>No worthwhile changes found for this request. It's good to go as planned.</p></div>`;
+
+  const decided = SSET.suggestions.filter(s => state.dec[s.id]?.action).length;
+  const contract = state.serverErrors?.length ? `<details class="disclose"><summary>Developer: the engine's output broke ${state.serverErrors.length} contract rule${state.serverErrors.length > 1 ? "s" : ""}</summary>
+      <ul class="small">${state.serverErrors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></details>` : "";
+  return `<div class="stack">
+    ${stale}${contract}${estimate}${breakdown}
+    <div class="spread" style="margin-top:22px"><h2>Options to lower it</h2><span class="muted">${SSET.suggestions.length} of max 3 · you decide</span></div>
+    ${mutedNote()}
+    <p class="muted small">These are generated automatically and can be wrong. Check the trade-off against what you know about your experiment. Nothing changes unless you choose it.</p>
+    ${suggs}
+      <details class="disclose small" id="d-share" style="max-width:640px;margin-top:18px"><summary>What's shared if you tick this?</summary>
+        ${PLACEHOLDERS ? placeholder("what exactly is shared when you tick the box, where it goes, and what is never shared") : `
+        <div class="stack" style="margin-top:8px">
+          <p><strong>For each suggestion you act on:</strong> which suggestion it was (e.g. "S2"), its type and device, what you did (accept, reject, pick another time, report a number), the reason if you picked one, the time you chose if you picked another time, your comment if you reported a number, and the date.</p>
+          <p><strong>Never:</strong> your name, your group, or the rest of your bookings. The request is tagged with a random code, not your ID.</p>
+          <p><strong>Where it goes:</strong> the lab's shared feedback log. The assistant reads it to stop repeating suggestions your lab keeps turning down (3 times → muted). Reported numbers go to the lab manager.</p>
+          <p class="muted">In a lab this small, a date plus a device can still hint at who it was. That's why it's off unless you tick it.</p>
+        </div>`}</details>
+    <div class="sticky stack" style="margin-top:18px">
+      <label class="consent"><input type="checkbox" id="consent" ${state.share ? "checked" : ""}>
+        <span>Share what I did with these suggestions, anonymously and pooled at lab level, to improve them. <span class="muted">Off unless you tick it. Details just above.</span></span></label>
+      <div class="spread">
+        <button class="btn" data-go="1">← Edit request</button>
+        <div class="row"><span class="muted">${decided ? `${decided} decision${decided>1?"s":""}` : "Your plan stays as it is unless you pick something"}</span>
+        <button class="btn primary" data-go="3">Confirm bookings</button></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Rule 9 made visible: the engine drops muted (type, device) pairs silently, so the UI names them.
+   Only pairs that concern a device in this request are shown. */
+function mutedNote() {
+  const mine = new Set(state.request.map(b => b.equipment_id));
+  const listed = new Set(SSET.suppressed.filter(x => x.reason === "muted_by_user_feedback").map(x => x.booking_id));
+  const pairs = MUTED.filter(([, eq]) => mine.has(eq));
+  if (!pairs.length || listed.size) return "";
+  return `<div class="callout small"><strong>Not suggested any more in your lab:</strong> ${pairs.map(([t, eq]) => `${esc(TYPE_LABEL[t] ?? t)} · ${esc(shortEq(eq).toLowerCase())}`).join(", ")}.
+    People in your lab turned ${pairs.length > 1 ? "these" : "this"} down 3 or more times. The lab manager can switch ${pairs.length > 1 ? "them" : "it"} back on.</div>`;
+}
+
+function suppressedList() {
+  if (PLACEHOLDERS) return placeholder("which bookings the assistant left alone, and why (for example: fixed by your protocol)");
+  return `<ul style="margin:0;padding-left:18px">${SSET.suppressed.map(x => {
+    const b = bk(x.booking_id);
+    return `<li><strong>${esc(b ? shortEq(b.equipment_id) : x.booking_id)}</strong>${b ? ` <span class="mono muted">${esc(slot(b.start, b.end))}</span>` : ""}: ${esc(SUPP_LABEL[x.reason] ?? x.reason)}${x.detail ? `. <span class="muted">${esc(x.detail)}</span>` : ""}</li>`;
+  }).join("")}</ul>`;
+}
+
+function changeLine(s) {
+  const b = bk(s.booking_ids[0]); if (!b) return "";
+  const c = s.change, from = `${shortEq(b.equipment_id)} · ${slot(b.start, b.end)}`;
+  let to;
+  if (c.merge_into_booking_id) {
+    const t = bk(c.merge_into_booking_id);
+    to = t ? `Shared cycle · ${slot(t.start, t.end)}${t.load_pct && b.load_pct ? ` · ${b.load_pct}% + ${t.load_pct}% load` : ""}` : "Shared cycle";
+  } else {
+    /* share: two units of the same kind differ only in their qualifier ("large, older" vs "small"), so show full names */
+    const nameOf = c.new_equipment_id ? eqName : shortEq;
+    to = `${nameOf(c.new_equipment_id || b.equipment_id)} · ${c.new_start ? slot(c.new_start, c.new_end) : slot(b.start, b.end)}`;
+    if (c.new_equipment_id) return `<div class="change mono"><span class="from">${esc(`${eqName(b.equipment_id)} · ${slot(b.start, b.end)}`)}</span><span class="arrow" aria-hidden="true">→</span><span>${esc(to)}</span></div>`;
+  }
+  return `<div class="change mono"><span class="from">${esc(from)}</span><span class="arrow" aria-hidden="true">→</span><span>${esc(to)}</span></div>`;
+}
+
+/* Grid-intensity strip over the movable window: shows WHY a time is cleaner (data, not an estimate) */
+function gridStrip(s, custom) {
+  const b = bk(s.booking_ids[0]);
+  if (!b || !(s.change.new_start || custom)) return "";
+  const [w0, w1] = windowFor(b), hours = (w1 - w0) / HOUR;
+  const W = 720, H = 70, top = 8, bh = 40, x = t => (t - w0) / (w1 - w0) * W;
+  const vals = []; for (let t = w0; t < w1; t += HOUR) vals.push(gridAt(t));
+  const lo = 100, hi = 420, ht = v => Math.max(3, (v - lo) / (hi - lo) * bh);
+  const col = v => v == null ? "var(--sunk)" : v < 200 ? "var(--lo)" : v < 300 ? "var(--mid)" : "var(--hi)";
+  const rects = vals.map((v, i) => v == null ? "" : `<rect x="${(i / hours * W).toFixed(1)}" y="${top + bh - ht(v)}" width="${(W / hours + .3).toFixed(1)}" height="${ht(v)}" fill="${col(v)}" opacity=".75"/>`).join("");
+  const days = [];
+  for (let t = dayStart(w0); t < w1; t += DAY) {
+    if (isWeekday(t)) { const a = Math.max(w0, t + LAB_OPEN*HOUR), z = Math.min(w1, t + LAB_CLOSE*HOUR); if (z > a) days.push(`<rect x="${x(a)}" y="${top}" width="${x(z) - x(a)}" height="${bh}" fill="var(--sunk)"/>`); }
+    if (t >= w0) days.push(`<line x1="${x(t)}" x2="${x(t)}" y1="${top}" y2="${top+bh}" stroke="var(--line)"/><text x="${x(t) + 3}" y="${H - 4}">${dayName(t)} ${new Date(t).getUTCDate()}</text>`);
+  }
+  const box = (a, e, dash, stroke) => `<rect x="${x(parse(a))}" y="${top - 4}" width="${Math.max(2, x(parse(e)) - x(parse(a)))}" height="${bh + 8}" fill="none" stroke="${stroke}" stroke-width="2" ${dash ? 'stroke-dasharray="4 3"' : ""} rx="3"/>`;
+  const nw = custom ?? {new_start: s.change.new_start, new_end: s.change.new_end};
+  const g0 = gridAvg(parse(b.start), parse(b.end)), g1 = gridAvg(parse(nw.new_start), parse(nw.new_end));
+  return `<svg class="strip" viewBox="0 0 ${W} ${H}" role="img" aria-label="Grid carbon intensity over your flexibility window, with your current and ${custom ? "chosen" : "proposed"} time marked">
+      ${days.join("")}${rects}${box(b.start, b.end, true, "var(--muted)")}${box(nw.new_start, nw.new_end, false, "var(--ink)")}
+    </svg>
+    <div class="legend"><span><i style="border-color:var(--muted);border-top-style:dashed"></i>now${custom ? ` · avg ${Math.round(g0)} g/kWh` : ""}</span><span><i style="border-color:var(--ink)"></i>${custom ? `your time · avg ${Math.round(g1)} g/kWh` : "proposed"}</span><span>bars: grid CO₂ per kWh, lower is cleaner · shaded: lab hours</span></div>`;
+}
+
+/* Grid curve for the day being booked. Information, not a verdict: helps researchers learn when the grid is
+   clean themselves instead of relying on the assistant. */
+function dayStrip(d) {
+  const [s, t] = draftTimes(d); if (!(t > s)) return "";
+  const d0 = dayStart(s), W = 720, H = 62, top = 6, bh = 34, x = ms => (ms - d0) / DAY * W;
+  const lo = 100, hi = 420, ht = v => Math.max(3, (v - lo) / (hi - lo) * bh);
+  const col = v => v < 200 ? "var(--lo)" : v < 300 ? "var(--mid)" : "var(--hi)";
+  let bars = isWeekday(d0) ? `<rect x="${x(d0 + LAB_OPEN*HOUR)}" y="${top}" width="${x(d0 + LAB_CLOSE*HOUR) - x(d0 + LAB_OPEN*HOUR)}" height="${bh}" fill="var(--sunk)"/>` : "";
+  for (let h = 0; h < 24; h++) { const v = gridAt(d0 + h*HOUR); if (v != null) bars += `<rect x="${h / 24 * W}" y="${top + bh - ht(v)}" width="${W / 24 - 2}" height="${ht(v)}" fill="${col(v)}" opacity=".75"/>`; }
+  for (const h of [0, 6, 12, 18]) bars += `<text x="${h / 24 * W + 2}" y="${H - 4}">${String(h).padStart(2, "0")}:00</text>`;
+  const z = Math.min(t, d0 + DAY);
+  bars += `<rect x="${x(s)}" y="${top - 3}" width="${Math.max(2, x(z) - x(s))}" height="${bh + 6}" fill="none" stroke="var(--ink)" stroke-width="2" rx="3"/>`;
+  return `<details class="disclose"><summary>Grid on ${dayLabel(d0)}, for reference</summary>
+    <svg class="strip" viewBox="0 0 ${W} ${H}" role="img" aria-label="Hourly grid carbon intensity on ${dayLabel(d0)} with your booking marked">${bars}</svg>
+    <div class="legend"><span>bars: grid CO₂ per kWh, lower is cleaner</span><span>shaded: lab hours</span><span>box: your booking</span></div>
+  </details>`;
+}
+
+function suggCard(s) {
+  const d = state.dec[s.id] ?? {};
+  const b = bk(s.booking_ids[0]);
+  const canModify = s.type !== "coordinate" && b && b.movable !== "no";
+
+  if (d.action === "reject") {
+    return `<article class="card sugg collapsed" aria-label="${esc(s.headline)} (hidden)">
+      <div class="spread"><span class="muted">Hidden: ${esc(s.headline)}</span><button class="btn link" data-undo="${s.id}">Undo</button></div>
+      <div class="row" style="margin-top:8px" role="group" aria-label="Optional reason">
+        <span class="muted small">Why? (optional)</span>
+        ${REASONS.map(([k, l]) => `<button class="chip-btn" aria-pressed="${d.reason === k}" data-reason="${s.id}" data-val="${k}">${l}</button>`).join("")}
+      </div>
+      <p class="muted small" style="margin-top:6px">If you share feedback: once this kind of suggestion for this device has been turned down 3 times in your lab, it stops being suggested to anyone in the lab.</p>
+    </article>`;
+  }
+
+  let status = "";
+  if (d.action === "accept") status = s.needs_other_party
+    ? `<div class="status pending">⏳ <span>Request sent. The other group sees the time and load, not who asked, and can decline without a reason. Your booking stays as it is until they agree.</span><button class="btn link" data-undo="${s.id}">Withdraw</button></div>`
+    : `<div class="status ok">✓ <span>Accepted. Your booking changes when you confirm.</span>${canModify ? `<button class="btn link" data-modify="${s.id}">Change time</button>` : ""}<button class="btn link" data-undo="${s.id}">Undo</button></div>`;
+  if (d.action === "modify") status = `<div class="status ok">✓ <span>Moved to <strong class="mono">${esc(slot(d.modified_change.new_start, d.modified_change.new_end))}</strong>. The calculator will re-price it.</span><button class="btn link" data-modify="${s.id}">Change time</button><button class="btn link" data-undo="${s.id}">Undo</button></div>`;
+
+  const flag = state.flagOpen === s.id ? `<div class="editor stack">
+      <label for="flag-${s.id}"><strong>What looks wrong?</strong> <span class="muted">Goes to the lab manager without your name.</span></label>
+      <textarea id="flag-${s.id}" maxlength="280" rows="2" placeholder="e.g. this autoclave runs a shorter cycle"></textarea>
+      <div class="row"><button class="btn" data-flagsend="${s.id}">Send to lab manager</button><button class="btn link" data-flagcancel>Cancel</button></div>
+    </div>` : "";
+  const flagged = state.flags.some(f => f.suggestion_id === s.id);
+
+  /* Against automation bias: the three options look the same, none is pre-selected,
+     and the trade-off sits above the buttons so it is read before choosing. */
+  return `<article class="card sugg" aria-labelledby="h-${s.id}">
+    <div class="spread">
+      <div class="row"><span class="chip type">${TYPE_LABEL[s.type]}</span>${s.needs_other_party ? `<span class="chip plain">needs another group</span>` : ""}</div>
+      <div style="text-align:right"><div class="saving mono">−${kg(s.saving_kg.low)} to −${kg(s.saving_kg.high)} kg</div>
+        <div class="muted small">≈ ${kg(s.saving_kg.typ)} kg · ${Math.round(s.saving_pct)}% of this booking</div></div>
+    </div>
+    <h3 id="h-${s.id}" style="margin-top:8px">${esc(s.headline)}</h3>
+    ${changeLine(s)}
+    ${s.type === "reschedule" && d.open !== "modify" ? gridStrip(s) : ""}
+    <dl class="kv">
+      <dt>Why</dt><dd>${esc(s.why)}</dd>
+      <dt>You give up</dt><dd>${esc(s.tradeoff)}</dd>
+      <dt>Based on</dt><dd><span class="chip ${s.confidence === "low" ? "warn" : s.confidence === "high" ? "good" : "plain"}">${s.confidence} confidence</span> <span class="muted">${CONF_LABEL[s.confidence]}</span>
+        · ${flagged ? `<span class="muted">reported, thanks</span>` : `<button class="btn link" data-flag="${s.id}">Numbers look off?</button>`}</dd>
+    </dl>
+    ${status}
+    ${!d.action && !d.open ? `<div class="actions" role="group" aria-label="Your choice">
+      <button class="btn" data-accept="${s.id}">${s.needs_other_party ? "Ask to join" : "Accept"}</button>
+      ${canModify ? `<button class="btn" data-modify="${s.id}">Pick another time</button>` : ""}
+      <button class="btn" data-reject="${s.id}">No thanks</button>
+    </div>` : ""}
+    ${d.open === "modify" ? modifyEditor(s) : ""}${flag}
+  </article>`;
+}
+
+function modifyEditor(s) {
+  const b = bk(s.booking_ids[0]), d = state.dec[s.id];
+  const [w0, w1] = windowFor(b), dur = parse(b.end) - parse(b.start);
+  const days = []; for (let t = dayStart(Math.max(w0, EPOCH)); t < Math.min(w1, DATA_END); t += DAY) days.push(t);
+  const draft = d.draft ?? parse(s.change.new_start ?? b.start);
+  const draftDay = dayStart(draft), draftH = new Date(draft).getUTCHours();
+  const hours = []; for (let h = 6; h <= 22; h++) { const st = draftDay + h*HOUR; if (st >= w0 && st + dur <= w1) hours.push(h); }
+  const nw = {new_start: fmtTs(draft), new_end: fmtTs(draft + dur)};
+  return `<div class="editor stack">
+    <div class="row">
+      <label>Day <select id="m-day-${s.id}" data-mday="${s.id}">${days.map(t => `<option value="${t}" ${t===draftDay?"selected":""}>${dayLabel(t)}${isWeekday(t) ? "" : " (weekend)"}</option>`).join("")}</select></label>
+      <label>Start <select id="m-hour-${s.id}" data-mhour="${s.id}">${hours.map(h => `<option value="${h}" ${h===draftH?"selected":""}>${String(h).padStart(2,"0")}:00${inLabHours(draftDay + h*HOUR, draftDay + h*HOUR + dur) ? "" : " · outside lab hours"}</option>`).join("")}</select></label>
+      <span class="muted mono">until ${hhmm(draft + dur)} (${dur / HOUR} h)</span>
+    </div>
+    <p class="muted small">Only times inside your flexibility (${esc(MOVABLE_LABEL[b.movable])}) are offered. The assistant itself only proposes Mon–Fri ${LAB_OPEN}:00–${LAB_CLOSE}:00; you're free to pick outside that.</p>
+    ${hours.length ? "" : `<p class="formerr">No start time fits on this day. Pick another day.</p>`}
+    ${gridStrip(s, nw)}
+    <div class="row"><button class="btn" data-msave="${s.id}">Use this time</button><button class="btn link" data-mcancel="${s.id}">Cancel</button></div>
+  </div>`;
+}
+
+/* ====================================================================================
+   Screen 3: done
+   ==================================================================================== */
+function viewDone() {
+  const E = SSET.estimate, A = after();
+  const events = state.sent ?? [];
+  const changes = SSET.suggestions.map(s => {
+    const d = state.dec[s.id]; if (!d?.action || d.action === "reject") return "";
+    const b = bk(s.booking_ids[0]); if (!b) return "";
+    const txt = d.action === "modify" ? `moved to ${slot(d.modified_change.new_start, d.modified_change.new_end)}`
+      : s.needs_other_party ? "waiting for the other group" : (s.change.new_start ? `moved to ${slot(s.change.new_start, s.change.new_end)}` : "updated");
+    return `<li><strong>${esc(shortEq(b.equipment_id))}</strong>: ${esc(txt)}</li>`;
+  }).join("");
+  const shown = state.saved ?? events;
+  const eventsJson = shown.length ? `<pre>${esc(JSON.stringify(shown, null, 2))}</pre>` : "";
+  return `<div class="stack">
+    <div class="card stack">
+      <h2>${state.skipped ? "Booked as planned" : "Bookings confirmed"}</h2>
+      ${LIVE ? (state.bookError ? `<div class="warnbox" role="alert">Your plan was not saved: ${esc(state.bookError)}</div>`
+          : state.booked != null ? `<p class="small"><span class="chip good">saved</span> ${state.booked} booking${state.booked === 1 ? "" : "s"} written to <code>data/confirmed_bookings.csv</code>. "Start over" opens this plan again.</p>`
+          : `<p class="muted small">Saving your plan…</p>`)
+        : `<p class="small"><span class="chip plain">demo</span> Opened as a file, so the plan isn't saved. Run <code>python3 src/ui/serve.py</code> to save it.</p>`}
+      ${state.skipped ? `<p class="muted">No footprint check was run. That's fine; the assistant is optional.</p>` : `
+      <div class="row" style="gap:28px">
+        <div><div class="eyebrow">Planned</div><div class="big mono">≈ ${kg(E.kg.typ)}</div><div class="muted">${kg(E.kg.low)}–${kg(E.kg.high)} kg</div></div>
+        <div><div class="eyebrow">Booked</div><div class="big mono" style="color:var(--good)">≈ ${kg(A.typ)}</div><div class="muted">${kg(A.low)}–${kg(A.high)} kg</div></div>
+      </div>
+      ${changes ? `<ul style="margin:0;padding-left:18px">${changes}</ul>` : `<p class="muted">Everything booked as you planned it.</p>`}
+      ${A.pending ? `<p class="muted">You'll get a message when the other group answers. Up to ${kg(A.pending)} kg more if they agree.</p>` : ""}
+      ${A.recalc ? `<p class="muted">Adjusted times are being re-priced by the calculator.</p>` : ""}`}
+    </div>
+    ${state.skipped ? "" : `<div class="card stack">
+      ${state.share ? `<div class="spread"><h2>Feedback shared</h2><span class="chip good">no name · no group</span></div>
+        <p class="muted">Only what you did with each suggestion, pooled at lab level, so the assistant stops repeating suggestions that don't fit this lab.</p>
+        ${!events.length ? "" : LIVE
+          ? (state.saveError ? `<div class="warnbox" role="alert">Not saved: ${esc(state.saveError)}</div>`
+             : state.saved ? `<p class="small"><span class="chip good">saved</span> ${state.saved.length} event${state.saved.length > 1 ? "s" : ""} added to the lab's feedback log.</p>` : `<p class="muted small">Saving…</p>`)
+          : `<p class="small"><span class="chip plain">demo</span> Opened as a file, so nothing is saved. Run <code>python3 src/ui/serve.py</code> to save to <code>data/feedback_log.json</code>.</p>`}
+        ${eventsJson || `<p class="muted">Nothing to share: you didn't act on any suggestion.</p>`}
+        ${events.length ? `<div class="row"><button class="btn" data-download>Download feedback_events.json</button></div>` : ""}`
+      : `<div class="spread"><h2>Nothing was shared</h2><span class="chip plain">you opted out</span></div>
+        <p class="muted">Your choices stay with this booking. You can opt in next time.</p>
+        ${events.length ? `<details class="disclose"><summary>Developer: what would have been sent</summary>${eventsJson}
+          <div class="row" style="margin-top:8px"><button class="btn" data-download>Download feedback_events.json</button></div></details>` : ""}`}
+    </div>`}
+    <div class="row"><button class="btn" data-go="restart">Start over</button></div>
+  </div>`;
+}
+
+/* ---------- input handling ---------- */
+function onFormField(t) {
+  const d = state.form.draft, k = t.dataset.f;
+  if (t.type === "radio" && !t.checked) return;
+  d[k] = t.value;
+  if (k === "equipment_id") { const m = EQ[t.value]?.mode; if (m !== "cycle") d.load_pct = ""; if (m !== "shelf") d.shelves = "1"; }
+  if (k === "sday" && +d.eday < +d.sday) d.eday = d.sday;
+  if (k === "movable" && t.value !== "no") d.constraint = "";
+  return k !== "purpose" && k !== "constraint";  // free-text fields don't re-render (keeps the cursor)
+}
+
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.f && (t.dataset.f === "purpose" || t.dataset.f === "constraint")) onFormField(t);
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "consent") { state.share = t.checked; return; }
+  if (t.dataset.f) { if (onFormField(t)) render(); return; }
+  if (t.dataset.mday || t.dataset.mhour) {
+    const id = t.dataset.mday || t.dataset.mhour, d = state.dec[id];
+    const s = SSET.suggestions.find(x => x.id === id), b = bk(s.booking_ids[0]);
+    const cur = d.draft ?? parse(s.change.new_start ?? b.start);
+    const day = t.dataset.mday ? +t.value : dayStart(cur);
+    const h = t.dataset.mhour ? +t.value : new Date(cur).getUTCHours();
+    d.draft = day + h * HOUR; render();
+  }
+});
+
+function download(name, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2) + "\n"], {type: "application/json"});
+  const a = Object.assign(document.createElement("a"), {href: URL.createObjectURL(blob), download: name});
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  const ds = t.dataset, ts = dayTs();
+  if ("about" in ds) {
+    const box = $("#about"), open = box.hidden;
+    box.hidden = !open; if (open) { box.innerHTML = viewAbout(); box.scrollIntoView({block: "nearest"}); }
+    document.querySelectorAll("[data-about][aria-expanded]").forEach(b => b.setAttribute("aria-expanded", String(open)));
+    return;
+  }
+  if (ds.go) {
+    state.undoDel = null;
+    if (ds.go === "skip") { resetReview(); state.skipped = true; state.step = 3; bookLive(); }
+    else if (ds.go === "restart") resetAll();
+    else if (ds.go === "3") { state.sent = buildEvents(); state.step = 3; if (LIVE && state.share && state.sent.length) saveLive(); bookLive(); }
+    else if (ds.go === "2" && LIVE && state.step === 1) return priceLive();
+    else state.step = +ds.go;
+    return render();
+  }
+  /* plan screen */
+  if ("new" in ds) { state.form = {id: "__new__", draft: blankDraft()}; render(); $("#f-eq")?.focus(); return; }
+  if (ds.edit) { state.form = {id: ds.edit, draft: draftFrom(bk(ds.edit))}; render(); $("#f-eq")?.focus(); return; }
+  if ("fcancel" in ds) { state.form = null; return render(); }
+  if ("fsave" in ds) {
+    const f = state.form, d = f.draft;
+    if (formError(d, f.id)) { f.showErr = true; return render(); }
+    const [s, t2] = draftTimes(d), e2 = EQ[d.equipment_id];
+    const row = {equipment_id: d.equipment_id, start: fmtTs(s), end: fmtTs(t2), purpose: d.purpose.trim(), movable: d.movable,
+                 constraint: d.movable === "no" ? d.constraint.trim() : "", load_pct: e2.mode === "cycle" ? d.load_pct : "",
+                 shelves: e2.mode === "shelf" ? d.shelves : "", own: true};
+    if (f.id === "__new__") state.request.push({booking_id: `BK-${state.nextId++}`, isNew: true, ...row});
+    else Object.assign(bk(f.id), row);
+    state.request.sort((a, b) => a.start.localeCompare(b.start));
+    state.form = null; resetReview(); return render();
+  }
+  if ("fdelete" in ds || ds.del) {
+    const id = ds.del || state.form.id, idx = state.request.findIndex(b => b.booking_id === id);
+    if (idx < 0) return;
+    state.undoDel = {row: state.request[idx], idx};
+    state.request.splice(idx, 1);
+    state.form = null; resetReview(); return render();
+  }
+  if ("undodel" in ds && state.undoDel) {
+    state.request.splice(state.undoDel.idx, 0, state.undoDel.row); state.undoDel = null; resetReview(); return render();
+  }
+  if ("dlreq" in ds) return download("request.json", requestJson());
+  /* review screen */
+  if ("why" in ds) { state.whyOpen = !state.whyOpen; return render(); }
+  if (ds.accept) { state.dec[ds.accept] = {action: "accept", ts}; return render(); }
+  if (ds.reject) { state.dec[ds.reject] = {action: "reject", ts}; return render(); }  // one click; reason optional
+  if (ds.reason) { const d = state.dec[ds.reason]; d.reason = d.reason === ds.val ? undefined : ds.val; return render(); }
+  if (ds.undo) { delete state.dec[ds.undo]; return render(); }
+  if (ds.modify) {
+    const prev = state.dec[ds.modify];
+    const s = SSET.suggestions.find(x => x.id === ds.modify);
+    const from = prev?.modified_change?.new_start ?? s.change.new_start;
+    state.dec[ds.modify] = {open: "modify", prev, draft: from ? parse(from) : undefined}; return render();
+  }
+  if (ds.mcancel) { const p = state.dec[ds.mcancel]?.prev; if (p) state.dec[ds.mcancel] = p; else delete state.dec[ds.mcancel]; return render(); }
+  if (ds.msave) {
+    const s = SSET.suggestions.find(x => x.id === ds.msave), b = bk(s.booking_ids[0]), d = state.dec[s.id];
+    const start = d.draft ?? parse(s.change.new_start ?? b.start), dur = parse(b.end) - parse(b.start);
+    const mc = {new_start: fmtTs(start), new_end: fmtTs(start + dur)};
+    if (s.change.new_equipment_id) mc.new_equipment_id = s.change.new_equipment_id;
+    state.dec[s.id] = {action: "modify", modified_change: mc, ts}; return render();
+  }
+  if (ds.flag) { state.flagOpen = ds.flag; render(); $(`#flag-${ds.flag}`)?.focus(); return; }
+  if ("flagcancel" in ds) { state.flagOpen = null; return render(); }
+  if (ds.flagsend) {
+    const s = SSET.suggestions.find(x => x.id === ds.flagsend);
+    const txt = $(`#flag-${s.id}`).value.trim().slice(0, 280);
+    const ev = {request_id: ANON_REQ, suggestion_id: s.id, suggestion_type: s.type, equipment_id: mainEquipment(s), action: "flag_error", timestamp: ts};
+    if (txt) ev.comment = txt;
+    state.flags.push(ev); state.flagOpen = null; return render();
+  }
+  if ("download" in ds) return download("feedback_events.json", state.sent);
+});
+
+/* ---------- live mode (src/ui/serve.py) ---------- */
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const j = await r.json().catch(() => ({error: `HTTP ${r.status}`}));
+  if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+async function priceLive() {
+  state.busy = true; state.apiError = null; render();
+  try {
+    const j = await api("/api/suggest", requestJson());
+    MUTED = (await api("/api/health")).muted || [];
+    SSET = j.suggestion_set; SSET.suggestions = SSET.suggestions.slice(0, 3); ANON_REQ = anonId();
+    state.serverErrors = j.errors || []; state.pricedFor = sig(state.request);
+    resetReview(); state.step = 2;
+  } catch (e) { state.apiError = e.message; }
+  state.busy = false; render();
+}
+/* Confirm = book: the final plan goes to data/confirmed_bookings.csv (live mode only) */
+async function bookLive() {
+  const plan = finalPlan();
+  state.bookedPlan = plan;
+  if (!LIVE) return;
+  try {
+    const saved = (await api("/api/book", {...requestJson(), bookings: plan.map(b => Object.fromEntries(REQ_FIELDS.map(k => [k, b[k] ?? ""])))})).saved;
+    state.booked = saved.length; SAVED_PLAN = normalizePlan(saved);
+  } catch (e) { state.bookError = e.message; }
+  if (state.step === 3) render();
+}
+async function saveLive() {
+  try { state.saved = (await api("/api/feedback", state.sent)).saved; }
+  catch (e) { state.saveError = e.message; }
+  if (state.step === 3) render();
+}
+async function detectLive() {
+  if (!location.protocol.startsWith("http")) return;
+  try {
+    const j = await api("/api/health");
+    LIVE = !!j.ok; MUTED = j.muted || [];
+    const plan = (await api("/api/plan")).bookings;
+    if (plan?.length) { SAVED_PLAN = normalizePlan(plan); if (state.step === 1 && !state.form) resetAll(); }
+    const m = $("#mode"); m.textContent = "live engine"; m.className = "chip good";
+    m.title = "Connected to src/ui/serve.py: requests are priced by the real calculator and feedback is saved.";
+    render();
+  } catch { /* static page on some other server: stay in demo mode */ }
+}
+
+/* ---------- developer loader: render any SuggestionSet and list contract problems ---------- */
+function lint(ss) {
+  const w = [];
+  const req = ["request_id", "estimate", "suggestions", "suppressed"].filter(k => !(k in ss));
+  if (req.length) return [`Missing required field(s): ${req.join(", ")}. Can't render.`];
+  if (ss.suggestions.length > 3) w.push(`${ss.suggestions.length} suggestions (max 3, rule 4). Showing the first 3.`);
+  for (let i = 1; i < ss.suggestions.length; i++) if (ss.suggestions[i].saving_kg.typ > ss.suggestions[i-1].saving_kg.typ) w.push("Suggestions not sorted biggest saving first (rule 4).");
+  if (ss.estimate.hotspots.length > 4) w.push(`${ss.estimate.hotspots.length} hotspots (schema max 4). The UI merged them per device.`);
+  const ids = ss.estimate.hotspots.map(h => h.equipment_id); if (new Set(ids).size !== ids.length) w.push("Hotspots repeat a device (one row per booking?). Should be one row per device.");
+  const mine = new Set(state.request.map(b => b.booking_id));
+  if (ss.booking_ids && (ss.booking_ids.length !== mine.size || ss.booking_ids.some(id => !mine.has(id)))) w.push("booking_ids don't match the request on screen 1. Was it priced for a different request?");
+  for (const s of ss.suggestions) {
+    if (!s.tradeoff) w.push(`${s.id}: empty tradeoff (rule 6).`);
+    for (const id of s.booking_ids) { const b = bk(id); if (!b) w.push(`${s.id}: unknown booking ${id}.`); else if (b.movable === "no") w.push(`${s.id}: touches fixed booking ${id} (rule 1)!`); }
+    if (/\b(group [ABC]|[ABC]\d)\b/.test(s.why + s.tradeoff + s.headline)) w.push(`${s.id}: text seems to name a group or researcher (rule 7).`);
+    if (s.saving_kg.typ < 0.2) w.push(`${s.id}: saving below 0.2 kg threshold (rule 8).`);
+  }
+  return w;
+}
+$("#loader").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const box = $("#loadmsg");
+  try {
+    const ss = JSON.parse(await f.text()), w = lint(ss);
+    if (w[0]?.startsWith("Missing")) { box.innerHTML = `<div class="warnbox">${esc(w[0])}</div>`; return; }
+    ss.suggestions = ss.suggestions.slice(0, 3);
+    SSET = ss; ANON_REQ = anonId(); state.pricedFor = sig(state.request); state.form = null; resetReview(); state.step = 2; render();
+    box.innerHTML = w.length ? `<div class="warnbox"><strong>Loaded ${esc(f.name)} with ${w.length} issue${w.length>1?"s":""}:</strong><ul style="margin:6px 0 0;padding-left:18px">${w.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : `<p class="chip good">Loaded ${esc(f.name)}: no contract issues found</p>`;
+  } catch (err) { box.innerHTML = `<div class="warnbox">Not valid JSON: ${esc(err.message)}</div>`; }
+});
+
+$("#mode").title = "Opened as a file: shows the baked-in AI output for the demo request; nothing is saved.";
+render();
+detectLive();
+</script>
+</body>
+</html>
