@@ -1,6 +1,6 @@
 """
 Domain models matching data/bookings.csv, data/equipment.csv, and
-data/scenario_request.csv as documented in README.md / CONTRACT.md, and as
+data/scenario_request.csv as documented in CONTRACT.md, and as
 confirmed against the real src/lab/calculator.py.
 
 These are intentionally plain dataclasses with no calculator logic in them --
@@ -8,9 +8,7 @@ all kg/kWh numbers still come from calculator.py via ports.CalculatorPort.
 
 NOTE on equipment.csv: calculator.py reads EQUIPMENT[r["id"]] -- the id
 column is literally "id", not "equipment_id". It also reads e["shelves"]
-for shelf-mode equipment (total shelf count of the unit), which isn't
-listed in README.md's own equipment.csv data dictionary -- worth flagging
-to the team, since the doc and the code appear to have drifted.
+for shelf-mode equipment (total shelf count of the unit).
 """
 from __future__ import annotations
 import csv

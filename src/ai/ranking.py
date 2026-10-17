@@ -42,7 +42,7 @@ class RankedProposal:
 def _follows_another_session(
     booking: Booking, new_start: datetime, all_bookings: list[Booking]
 ) -> bool:
-    """README: confocal-style warm-up is skipped if the new slot directly
+    """Confocal-style warm-up is skipped if the new slot directly
     follows ANOTHER session on the same equipment. The booking being moved
     doesn't count: once moved, its original slot no longer exists."""
     return any(
