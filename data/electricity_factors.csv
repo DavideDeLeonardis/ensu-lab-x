@@ -1,0 +1,3 @@
+basis,g_per_kwh,source,basis_note
+location,262.2,EMAPS,"NL 2025 annual mean, flow-traced (Electricity Maps); default"
+market,0.0,MC2024,TU/e green electricity contract: direct emissions 0 (NL method); upstream emissions not counted

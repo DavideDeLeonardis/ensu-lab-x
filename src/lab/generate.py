@@ -50,6 +50,20 @@ SOURCES = {
     "TUE_PILOT": "TU/e (n.d.). Lab Sustainability Pilot. https://www.tue.nl/en/our-university/about-the-university/"
                  "sustainability/sustainability-in-research/lab-sustainability-pilot",
     "ASSUMED": "Team assumption (typical manufacturer spec class); to be replaced by a measured or datasheet value",
+    "FARLEY2023": "Farley, M. & Nicolet, B.P. (2023). Re-use of laboratory utensils reduces CO2 equivalent footprint "
+                  "and running costs. PLOS ONE, 18(4), e0283697. https://doi.org/10.1371/journal.pone.0283697 "
+                  "(per-item values from S1 Table, based on UK government GHG conversion factors 2020). PLOS ONE added an "
+                  "Editorial Note on 28 May 2026 about the peer-review process (no evidence of author involvement).",
+    "EPP_WP114": "Hermuth-Kleinschmidt, K. (n.d.). Small Tips – Big Impact: The Carbon Footprint of Biobased Pipette "
+                 "Tips. Eppendorf White Paper No. 114. https://explore.eppendorf.com/rs/207-WZR-206/images/"
+                 "White-Paper_114_Sustainability_Small-Tips-%E2%80%93-Big-Imp_eng_1.pdf",
+    "RIZAN2021": "Rizan, C. et al. (2021). Environmental impact of personal protective equipment distributed for use "
+                 "by health and social care services in England in the first six months of the COVID-19 pandemic. "
+                 "J R Soc Med, 114(5), 250–263. Glove figure as reported in: National Academy of Medicine (2026). "
+                 "Nitrile Glove Hotspot Analysis. https://nam.edu/wp-content/uploads/2026/02/Nitrile-Glove-Hotspot-Analysis.pdf",
+    "MC2024": "Milieu Centraal / CO2emissiefactoren.nl (2024). Notitie CO2-emissiefactoren elektriciteit "
+              "(14 Feb 2024): direct emissions of renewable electricity are set to 0. "
+              "https://co2emissiefactoren.nl/media/sources/240214-Notitie-CO2emissiefactoren-elektriciteit-pdf.pdf",
 }
 
 # ---------------------------------------------------------------------------
@@ -334,6 +348,180 @@ for b in bookings:
     b.update(estimate(b))
 
 # ---------------------------------------------------------------------------
+# Experiment plans: consumables catalogue, curated equivalences, electricity factors
+# (CONTRACT.md §1b). No randomness below this point is used for these tables.
+#
+# kg_per_unit = kg CO2e per unit NOT from electricity; kwh_per_unit = electricity per unit
+# (washing/autoclaving/drying a reusable item), priced later with the chosen electricity factor.
+# low/high multipliers are team estimates: ±10% for measured values, −20%/+30% for derived ones.
+# ---------------------------------------------------------------------------
+# Farley & Nicolet (2023), S1 Table: yearly totals (kg CO2e) and the reuse energy (kWh/yr) behind them.
+# Their electricity factor (UK 2020) is taken out again, so reuse follows our electricity basis.
+FARLEY_UK_KG_PER_KWH = 0.21233
+FARLEY = {  # case: (uses per year, single-use kg/yr, {reuse option: kg/yr}, reuse kWh/yr)
+    "tube50": (5200, 267.41157617777776, {"glass": 23.751678066911541, "pp": 21.995768429133769},
+               19.547872340425531 + 49.096666666666671 + 6.7382617347120073),
+    "petri6": (5200, 122.6469764, {"glass": 43.592044052492753},
+               28.723404255319149 + 103.9212777777778 + 37.700415733930285),
+    "pasteur": (520, 18.251536824559999, {"glass": 1.7222457774141644},
+                3.6702127659574471 + 0.24548333333333333 + 1.0705056319511066),
+    # sheet "Case 3-connical flasks": 1 L Erlenmeyer, 52 uses/yr; washer 2.697 + autoclave 12.274 + drying 0.787 kWh/yr
+    "flask1l": (52, 26.391804926240006, {"glass": 3.8281953560715385, "pc": 3.9689854272035388},
+                2.6968085106382977 + 12.274166666666668 + 0.786588920868422),
+}
+
+
+def farley_single_use(case):
+    uses, su_kg, _, _ = FARLEY[case]
+    return round(su_kg / uses, 6)
+
+
+def farley_reuse(case, option):
+    """(kg CO2e per use without electricity, kWh per use)."""
+    uses, _, reuse, kwh = FARLEY[case]
+    return round((reuse[option] - kwh * FARLEY_UK_KG_PER_KWH) / uses, 6), round(kwh / uses, 6)
+
+
+DERIVED = dict(low=0.8, high=1.3, confidence="derived", source="FARLEY2023")
+CONSUMABLES = [
+    dict(item_id="TIP-10-F-RACK", name="Filter pipette tip 0.1–10 µL, fossil-based, in rack", kind="consumable",
+         unit="piece", kg_per_unit=0.00309, kwh_per_unit=0, low=0.9, high=1.1, confidence="measured",
+         source="EPP_WP114", basis="3.09 g CO2e per tip, cradle-to-gate PCF incl. rack and packaging (960-tip unit)"),
+    dict(item_id="TIP-10-F-BIO-RELOAD", name="Filter pipette tip 0.1–10 µL, biobased, reload system",
+         kind="consumable", unit="piece", kg_per_unit=0.00222, kwh_per_unit=0, low=0.9, high=1.1,
+         confidence="measured", source="EPP_WP114",
+         basis="2.22 g CO2e per tip, cradle-to-gate PCF incl. reload trays and packaging (960-tip unit)"),
+    dict(item_id="TUBE-50-SU", name="Conical tube 50 mL, PP, single use", kind="consumable", unit="piece",
+         kg_per_unit=farley_single_use("tube50"), kwh_per_unit=0, **DERIVED,
+         basis="PP tube + PE cap production and incineration; 267.4 kg CO2e per 5200 tubes"),
+    dict(item_id="TUBE-50-GLASS-REUSE", name="Conical tube 50 mL, borosilicate glass, reused (per use)",
+         kind="consumable", unit="piece", **dict(zip(("kg_per_unit", "kwh_per_unit"), farley_reuse("tube50", "glass"))),
+         **DERIVED, basis="Weekly reuse, 10% breakage/yr; glass + PP cap production, washer, autoclave, drying cabinet"),
+    dict(item_id="TUBE-50-PP-REUSE", name="Conical tube 50 mL, PP, reused (per use)", kind="consumable",
+         unit="piece", **dict(zip(("kg_per_unit", "kwh_per_unit"), farley_reuse("tube50", "pp"))), **DERIVED,
+         basis="Weekly reuse of autoclavable PP tubes, 10% breakage/yr; washer, autoclave, drying cabinet"),
+    dict(item_id="PETRI-6-SU", name="Petri dish 6 cm, polystyrene, single use", kind="consumable", unit="piece",
+         kg_per_unit=farley_single_use("petri6"), kwh_per_unit=0, **DERIVED,
+         basis="7.5 g dish production and incineration; 122.6 kg CO2e per 5200 dishes"),
+    dict(item_id="PETRI-6-GLASS-REUSE", name="Petri dish 5.5 cm, borosilicate glass, reused (per use)",
+         kind="consumable", unit="piece", **dict(zip(("kg_per_unit", "kwh_per_unit"), farley_reuse("petri6", "glass"))),
+         **DERIVED, basis="Weekly reuse, 10% breakage/yr; washer, autoclave, drying cabinet"),
+    dict(item_id="PASTEUR-SU", name="Pasteur pipette, HDPE, single use", kind="consumable", unit="piece",
+         kg_per_unit=farley_single_use("pasteur"), kwh_per_unit=0, **DERIVED,
+         basis="10.6 g pipette production and incineration; 18.3 kg CO2e per 520 pipettes"),
+    dict(item_id="PASTEUR-GLASS-REUSE", name="Pasteur pipette, soda-lime glass, reused (per use)",
+         kind="consumable", unit="piece", **dict(zip(("kg_per_unit", "kwh_per_unit"), farley_reuse("pasteur", "glass"))),
+         **DERIVED, basis="Weekly reuse, 10% breakage/yr; washer, autoclave, drying cabinet"),
+    dict(item_id="FLASK-1L-SU", name="Erlenmeyer flask 1 L, polycarbonate, single use", kind="consumable",
+         unit="piece", kg_per_unit=farley_single_use("flask1l"), kwh_per_unit=0, **DERIVED,
+         basis="154.8 g polycarbonate flask production and incineration; 26.4 kg CO2e per 52 flasks"),
+    dict(item_id="FLASK-1L-GLASS-REUSE", name="Erlenmeyer flask 1 L, borosilicate glass, reused (per use)",
+         kind="consumable", unit="piece", **dict(zip(("kg_per_unit", "kwh_per_unit"), farley_reuse("flask1l", "glass"))),
+         **DERIVED, basis="Weekly reuse, 10% breakage/yr; 270 g glass flask, washer, autoclave, drying cabinet"),
+    dict(item_id="FLASK-1L-PC-REUSE", name="Erlenmeyer flask 1 L, polycarbonate, reused (per use)", kind="consumable",
+         unit="piece", **dict(zip(("kg_per_unit", "kwh_per_unit"), farley_reuse("flask1l", "pc"))), **DERIVED,
+         basis="Weekly reuse of the polycarbonate flask, 10% breakage/yr; washer, autoclave, drying cabinet"),
+    dict(item_id="GLOVE-NITRILE", name="Nitrile examination glove", kind="consumable", unit="piece",
+         kg_per_unit=0.026, kwh_per_unit=0, low=0.9, high=1.3, confidence="derived", source="RIZAN2021",
+         basis="~26 g CO2e per glove incl. incineration; manufacturer LCAs report 25–34 g"),
+]
+
+EQUIVALENCES = [
+    dict(equivalence_id="EQ-001", item_id="TIP-10-F-RACK", alternative_id="TIP-10-F-BIO-RELOAD",
+         type="substitute", ratio=1, incompatible_with="", requires_validation=False, needs_other_party=False,
+         tradeoff="You load the tips from reload trays into a rack you keep; same tip, PCR clean and sterile.",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="EPP_WP114"),
+    dict(equivalence_id="EQ-002", item_id="TUBE-50-SU", alternative_id="TUBE-50-GLASS-REUSE",
+         type="substitute", ratio=1, incompatible_with="single_use_required", requires_validation=True,
+         needs_other_party=False,
+         tradeoff="Tubes are washed and autoclaved between uses, and glass has a lower centrifuge rating: "
+                  "validate it for your protocol first.",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="FARLEY2023"),
+    dict(equivalence_id="EQ-003", item_id="TUBE-50-SU", alternative_id="TUBE-50-PP-REUSE",
+         type="substitute", ratio=1, incompatible_with="single_use_required", requires_validation=True,
+         needs_other_party=False,
+         tradeoff="Tubes are washed and autoclaved between uses: validate that reuse suits your protocol "
+                  "(residues, sterility).",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="FARLEY2023"),
+    dict(equivalence_id="EQ-004", item_id="PETRI-6-SU", alternative_id="PETRI-6-GLASS-REUSE",
+         type="substitute", ratio=1, incompatible_with="single_use_required;tc_treated", requires_validation=True,
+         needs_other_party=False,
+         tradeoff="Glass dishes are not treated for adherent culture and are washed and autoclaved between uses: "
+                  "validate them for your use.",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="FARLEY2023"),
+    dict(equivalence_id="EQ-005", item_id="PASTEUR-SU", alternative_id="PASTEUR-GLASS-REUSE",
+         type="substitute", ratio=1, incompatible_with="single_use_required", requires_validation=False,
+         needs_other_party=False,
+         tradeoff="Glass pipettes are washed and autoclaved between uses and can break: handle them with care.",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="FARLEY2023"),
+    # Same kind of device (class II biosafety cabinet, same room), smaller and newer: 0.46 vs 0.78 kW.
+    # Saves only on the location basis: with the green contract electricity counts 0, so it drops below 0.2 kg.
+    dict(equivalence_id="EQ-006", item_id="BSC-1", alternative_id="BSC-2",
+         type="substitute", ratio=1, incompatible_with="", requires_validation=False, needs_other_party=False,
+         tradeoff="The small cabinet has less space inside: check that your work fits, and book it instead of "
+                  "the large one.",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="TRAN2026"),
+    # A different imaging method, not the same device: widefield instead of confocal when 2D images are enough
+    # (no optical sectioning needed). Both power draws are team estimates (ASSUMED: 1.6 vs 0.35 kW), so the saving
+    # carries "estimate" confidence; same hours assumed (ratio 1). Electricity only: 0 on the market basis.
+    dict(equivalence_id="EQ-007", item_id="CONF-1", alternative_id="FLU-1",
+         type="substitute", ratio=1, incompatible_with="", requires_validation=True, needs_other_party=False,
+         tradeoff="Widefield images are less sharp in thick samples (no optical sectioning): validate that 2D "
+                  "images are enough for your analysis.",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="ASSUMED"),
+    # Farley & Nicolet (2023), S1 Table, sheet "Case 3-connical flasks"
+    dict(equivalence_id="EQ-008", item_id="FLASK-1L-SU", alternative_id="FLASK-1L-GLASS-REUSE",
+         type="substitute", ratio=1, incompatible_with="single_use_required", requires_validation=True,
+         needs_other_party=False,
+         tradeoff="Flasks are washed and autoclaved between uses: validate that detergent residues do not affect "
+                  "your culture.",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="FARLEY2023"),
+    dict(equivalence_id="EQ-009", item_id="FLASK-1L-SU", alternative_id="FLASK-1L-PC-REUSE",
+         type="substitute", ratio=1, incompatible_with="single_use_required", requires_validation=True,
+         needs_other_party=False,
+         tradeoff="The same plastic flask is washed and autoclaved between uses: validate that reuse suits your "
+                  "culture (residues, sterility).",
+         curated_by="Lab X team (stand-in for the lab's expert panel)", source="FARLEY2023"),
+]
+
+ELECTRICITY_FACTORS = [
+    dict(basis="location", g_per_kwh=262.2, source="EMAPS",
+         basis_note="NL 2025 annual mean, flow-traced (Electricity Maps); default"),
+    dict(basis="market", g_per_kwh=0.0, source="MC2024",
+         basis_note="TU/e green electricity contract: direct emissions 0 (NL method); upstream emissions not counted"),
+]
+
+# Labs a team can choose in the plan UI, with the equipment each one has (curated by the lab manager).
+# Only Lab X exists for now: a new lab is added here once its real equipment data (with sources) is available.
+# Not part of the contract: the UI uses it to filter which equipment a team can put in a plan.
+LABS = [
+    dict(lab_id="LABX", name="Lab X: cell & tissue culture (fictional)", based_on="TUE_LCTE",
+         note="Modelled on TU/e's Laboratory for Cell & Tissue Engineering",
+         rooms=[r["id"] for r in ROOMS],
+         equipment=[e["id"] for e in EQUIPMENT]),
+]
+
+# Demo plan for researcher A1 (no researcher or group id inside: privacy). Quantities are
+# SYNTHETIC team assumptions for one week of valve scaffold seeding.
+PLAN_A1 = dict(
+    plan_id="PLAN-2026-0042",
+    title="Valve scaffold seeding, week 42",
+    notes="Cells are sensitive to serum lot changes.",
+    lines=[
+        dict(line_id="L1", item_id="TIP-10-F-RACK", quantity=960, unit="piece", requirements=["sterile"]),
+        dict(line_id="L2", item_id="TUBE-50-SU", quantity=40, unit="piece", requirements=["sterile"]),
+        dict(line_id="L3", item_id="PETRI-6-SU", quantity=30, unit="piece", requirements=["sterile"]),
+        dict(line_id="L4", item_id="PETRI-6-SU", quantity=20, unit="piece", requirements=["sterile", "tc_treated"]),
+        dict(line_id="L5", item_id="PASTEUR-SU", quantity=60, unit="piece", requirements=["sterile"]),
+        dict(line_id="L6", item_id="GLOVE-NITRILE", quantity=100, unit="piece"),
+        dict(line_id="L7", item_id="BSC-1", quantity=15, unit="h"),
+        dict(line_id="L8", item_id="BIO-1", quantity=96, unit="h", locked=True,
+             lock_reason="Protocol timing fixed; safety interlock"),
+    ],   # two machines only: one with an expert swap (L7), one locked by protocol (L8)
+)
+
+
+# ---------------------------------------------------------------------------
 # Write CSVs
 # ---------------------------------------------------------------------------
 eq_cols = ["id", "name", "category", "room", "mode", "active_kw", "idle_kw", "kwh_per_day",
@@ -372,8 +560,18 @@ with open(DATA / "sources.csv", "w", newline="") as f:
     for k, v in SOURCES.items():
         w.writerow([k, v])
 
+for name, rows in (("consumables", CONSUMABLES), ("equivalences", EQUIVALENCES),
+                   ("electricity_factors", ELECTRICITY_FACTORS)):
+    with open(DATA / f"{name}.csv", "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0]))
+        w.writeheader()
+        w.writerows(rows)
+(DATA / "plan_A1.json").write_text(json.dumps(PLAN_A1, ensure_ascii=False, indent=2) + "\n")
+(DATA / "labs.json").write_text(json.dumps(LABS, ensure_ascii=False, indent=2) + "\n")
+
 payload = dict(epoch=EPOCH.strftime("%Y-%m-%d"), days=DAYS, grid=grid, equipment=EQUIPMENT,
-               rooms=ROOMS, groups=GROUPS, bookings=bookings, sources=SOURCES)
+               rooms=ROOMS, groups=GROUPS, bookings=bookings, sources=SOURCES,
+               consumables=CONSUMABLES, equivalences=EQUIVALENCES)
 (DATA / "lab_data.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
 
 tpl = EXPLORER / "lab_template.html"

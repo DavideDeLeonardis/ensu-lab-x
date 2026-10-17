@@ -22,6 +22,8 @@ from .ports import CalculatorPort
 from .ranking import rank_proposals, build_suppressed_list, RankedProposal
 from .phrasing import Phraser, PhraseContext, template_phraser
 from .candidates import derive_alternates
+from . import booking_ai
+from .llm.usage_log import DEFAULT_LOG
 
 MAX_HOTSPOTS = 4  # suggestion_set.schema.json: estimate.hotspots maxItems
 
@@ -43,7 +45,13 @@ def build_suggestion_set(
     calc: CalculatorPort,
     phraser: Phraser = template_phraser,
     muted_pairs: Optional[set[tuple[str, str]]] = None,
+    llm=None,
+    usage_log=DEFAULT_LOG,
+    free_text: str = "",
 ) -> dict:
+    """`llm` (optional, see src/ai/llm/): it picks among the allowed options and writes the text
+    (booking_ai.py); without it, rules + templates exactly as before. `free_text`: the researcher's own words
+    (e.g. booking purposes), passed to the LLM scrubbed and as untrusted data."""
     booking_by_id = {b.booking_id: b for b in request_bookings}
     all_by_id = {b.booking_id: b for b in all_bookings}
 
@@ -93,9 +101,14 @@ def build_suggestion_set(
                                                               # until equipment.csv
                                                               # actually has rows
     cycle_equipment = {eid for eid, e in equipment_by_id.items() if e.mode == "cycle"} or None
-    top_proposals = rank_proposals(request_bookings, all_bookings, calc, muted_pairs, alternates,
-                                   cycle_equipment)
-    suggestions = []
+    if llm is None:
+        top_proposals, proposer = rank_proposals(request_bookings, all_bookings, calc, muted_pairs, alternates,
+                                                 cycle_equipment), "rules"
+    else:
+        pool = booking_ai.option_pool(request_bookings, all_bookings, calc, muted_pairs, alternates, cycle_equipment)
+        top_proposals, proposer = booking_ai.propose(pool, request_bookings, equipment_by_id, all_by_id, llm,
+                                                     usage_log, free_text)
+    suggestions, contexts, templates = [], [], []
     for i, proposal in enumerate(top_proposals, start=1):
         booking = booking_by_id[proposal.booking_id]
         alt_id = proposal.change.get("new_equipment_id")
@@ -106,6 +119,8 @@ def build_suggestion_set(
             merge_target=all_by_id.get(proposal.change.get("merge_into_booking_id", "")),
         )
         text = phraser(proposal, ctx)
+        contexts.append(ctx)
+        templates.append(text)
         equipment_involved = _equipment_for_proposal(booking, proposal, equipment_by_id)
 
         suggestions.append({
@@ -122,7 +137,11 @@ def build_suggestion_set(
             "needs_other_party": proposal.needs_other_party,
         })
 
-    return {
+    # one failed proposer call means the API is unreachable or misbehaving: don't call it again for text
+    text_llm = llm if proposer == "llm" else None
+    phraser_used = booking_ai.phrase(suggestions, top_proposals, contexts, templates, equipment_by_id, all_by_id,
+                                     text_llm, usage_log)
+    sset = {
         "request_id": request_id,
         "booking_ids": [b.booking_id for b in request_bookings],
         "estimate": {
@@ -134,3 +153,15 @@ def build_suggestion_set(
         "suggestions": suggestions,
         "suppressed": build_suppressed_list(request_bookings),
     }
+    if phraser_used != "template":
+        # last line of defence: if any LLM text still breaks the contract, every card goes back to its template
+        from src.contract import validate
+        if validate.check_suggestion_set(sset):
+            for sg, tpl in zip(suggestions, templates):
+                sg.update(headline=tpl.headline, why=tpl.why, tradeoff=tpl.tradeoff)
+            phraser_used = "template"
+    used = [v for v, on in ((booking_ai.BOOKING_PROPOSER_VERSION, proposer == "llm"),
+                            (booking_ai.BOOKING_PHRASER_VERSION, phraser_used != "template")) if on]
+    sset["generator"] = {"proposer": proposer, "phraser": phraser_used,
+                         "model": llm.model if used else None, "prompt_version": "/".join(used) or None}
+    return sset

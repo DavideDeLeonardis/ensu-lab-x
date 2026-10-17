@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab X plan assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!--
+  Served by src/ui/serve.py at /plan (API in src/ui/plan_api.py). Reads an ExperimentPlan + SuggestionSet (CONTRACT.md §1b, §2), emits FeedbackEvents (§4).
+  Never computes kg itself except "estimate after Accept" = estimate.kg − accepted saving_kg (CONTRACT.md §5).
+  Same design tokens as the booking UI (src/ui/app_template.html).
+-->
+<style>
+:root{
+  --ground:#EDF1F0; --surface:#FFFFFF; --sunk:#F5F8F7; --ink:#13201D; --muted:#5A6A66; --line:#D2DBD8;
+  --accent:#1E5BB8; --accent-soft:#DCE7F7; --accent-ink:#FFFFFF;
+  --lock:#6B5B8C; --lock-soft:#ECE7F4;
+  --good:#2F7D55; --good-soft:#DDEFE5; --warn:#9A6A12; --warn-soft:#F6ECD5; --bad:#B23A2E; --bad-soft:#F8E1DE;
+  --embodied:#1E5BB8; --electric:#DDA93A;
+  --shadow:0 1px 2px rgba(19,32,29,.06),0 4px 16px rgba(19,32,29,.05);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#0E1513; --surface:#161F1D; --sunk:#1B2523; --ink:#E3ECE9; --muted:#95A6A1; --line:#2B3835;
+    --accent:#7AA7F0; --accent-soft:#1F3150; --accent-ink:#0E1513;
+    --lock:#B7A6DA; --lock-soft:#2A2438;
+    --good:#5FC08D; --good-soft:#18332A; --warn:#E0B550; --warn-soft:#3A2F17; --bad:#E0685A; --bad-soft:#3A1E1B;
+    --embodied:#7AA7F0; --electric:#E0B550;
+    --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;margin:0}
+h1,h2,h3{font-family:var(--cond);font-weight:600;margin:0}
+h1{font-size:22px} h2{font-size:18px} h3{font-size:15px}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .small{font-size:12px}
+.eyebrow{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 64px}
+header.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:18px}
+.stack>*+*{margin-top:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.spread{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500;min-height:38px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.good{background:var(--good);border-color:var(--good);color:#fff}
+.btn.small{min-height:30px;padding:4px 10px;font-size:13px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;line-height:1.4}
+.chip.lock{color:var(--lock);background:var(--lock-soft)}
+.chip.type{color:var(--accent);background:var(--accent-soft);text-transform:uppercase;letter-spacing:.05em}
+.chip.good{color:var(--good);background:var(--good-soft)}
+.chip.warn{color:var(--warn);background:var(--warn-soft)}
+.chip.bad{color:var(--bad);background:var(--bad-soft)}
+.chip.plain{color:var(--muted);border:1px solid var(--line)}
+.tag{font:inherit;font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.tag[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl-wrap{overflow-x:auto}
+textarea{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+select,input[type=text],input[type=number]{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);min-height:34px}
+input[type=number]{width:90px}
+td.item select{max-width:260px;width:100%}
+.tags{display:flex;flex-wrap:wrap;gap:3px;max-width:380px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:none;background:var(--surface);padding:7px 12px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+.big{font-family:var(--cond);font-size:34px;font-weight:600;line-height:1.05}
+.split{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--sunk);margin:8px 0 4px}
+.split .emb{background:var(--embodied)} .split .ele{background:var(--electric)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.hot{display:grid;grid-template-columns:minmax(0,1fr) 120px 70px;gap:8px;align-items:center}
+.bar{height:8px;border-radius:4px;background:var(--accent)}
+.bar.locked{background:var(--lock)}
+.sugg{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--surface)}
+.sugg.accepted{border-color:var(--good);box-shadow:inset 3px 0 0 var(--good)}
+.sugg.rejected{opacity:.55}
+.saving{font-family:var(--cond);font-size:22px;font-weight:600;color:var(--good)}
+.give{background:var(--sunk);border-radius:8px;padding:8px 10px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+@media (max-width:720px){
+  .grid2{grid-template-columns:1fr}
+  /* plan table → one card per line */
+  #planTable thead{display:none}
+  #planTable, #planTable tbody, #planTable tr, #planTable td{display:block;width:100%}
+  #planTable tr{border-bottom:1px solid var(--line);padding:10px 0;position:relative}
+  #planTable td{border:none;padding:4px 0}
+  #planTable td.item select{max-width:none;padding-right:40px}
+  #planTable td:last-child{position:absolute;top:10px;right:0;width:auto}
+  #planTable td.item{padding-right:44px}
+  .tags{max-width:none}
+}
+.err{color:var(--bad)}
+.hidden{display:none}
+#results.busy{opacity:.55;pointer-events:none}
+.warnline{color:var(--warn)}
+.checks{list-style:none;padding:0;margin:0}
+.checks li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:6px;padding:7px 0;border-bottom:1px solid var(--line)}
+.checks li:last-child{border-bottom:none}
+.ok{color:var(--good);font-weight:600} .ko{color:var(--bad);font-weight:600} .info{color:var(--accent);font-weight:600}
+.inwords{background:var(--accent-soft);border-radius:8px;padding:6px 10px}
+details summary{cursor:pointer;font-weight:500}
+.tour ol{margin:8px 0 0;padding-left:20px} .tour li+li{margin-top:6px}
+.qbar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--sunk);margin:6px 0 4px}
+.qbar .q-measured{background:var(--good)} .qbar .q-derived{background:var(--warn)} .qbar .q-estimate{background:var(--bad)}
+/* "← All assistants": a clear way back to the start page */
+.backlink{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;font-weight:500;
+  color:var(--accent);background:var(--accent-soft);border:1px solid transparent;border-radius:999px;
+  padding:5px 13px 5px 10px;margin-bottom:10px;text-decoration:none;line-height:1.2}
+.backlink:hover{border-color:var(--accent)}
+.backlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.backlink[hidden]{display:none}
+.backlink svg{width:14px;height:14px}
+details.fold > summary{list-style:none;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+details.fold > summary::-webkit-details-marker{display:none}
+details.fold > summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.fold[open] > summary::before{transform:rotate(90deg)}
+.seg.small button{padding:4px 10px;font-size:12px}
+details.req summary{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+details.req[open] summary{margin-bottom:6px}
+.sugg h3{font-size:15px}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px}
+/* "Show design values": each element says which value it serves and the rule that guarantees it */
+.vtag{display:none;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:12px;line-height:1.35;color:var(--lock);
+  background:var(--lock-soft);border:1px dashed var(--lock);border-radius:8px;padding:4px 8px;margin:4px 0;max-width:100%}
+.vtag b{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}
+body.values-on .vtag{display:flex}
+.btn[aria-pressed="true"]{background:var(--lock);border-color:var(--lock);color:var(--surface)}
+</style>
+</head>
+<body>
+<div class="wrap stack">
+  <header class="top">
+    <div>
+      <a href="/" class="backlink"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All assistants</a>
+      <h1>Experiment plan assistant</h1>
+      <p class="muted small">The CO₂ of your experiment and up to 3 approved greener swaps. Nothing changes unless you accept.</p>
+    </div>
+    <div class="stack" style="align-items:flex-end">
+      <div class="row" id="modeChips"></div>
+      <div class="row">
+        <button class="btn small" id="valuesBtn" aria-pressed="false" title="Label each part of the page with the value it serves">Show design values</button>
+        <button class="btn small" id="teamlabBtn" aria-controls="eqBox">Team &amp; lab</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="card vtag" style="flex-direction:column;align-items:flex-start;gap:4px" aria-label="Design values">
+    <b>Design values</b>
+    <span>Each dashed label shows which value a part of the page serves and the rule that guarantees it. The values come
+      from our Value Sensitive Design analysis: human control and academic freedom, transparency, privacy, expert
+      oversight, and the footprint of the AI itself.</span>
+  </section>
+
+  <details class="card tour">
+    <summary>New here? What this page does and what to try</summary>
+    <ol class="small">
+      <li><b>Your plan</b> is a shopping list for one week of a (fictional) lab experiment: disposable plastic items,
+        gloves, and hours on two machines. Hover an item for a plain explanation. Your changes are kept
+        when you reload the page; "Reset to demo plan" starts over.</li>
+      <li><b>Estimate</b> shows the CO₂ of that list. Plastics and gloves count from production; machines count their
+        electricity. The range (low–high) shows how uncertain the numbers are.</li>
+      <li><b>Suggestions</b> (at most 3) are swaps that lab experts approved in advance, such as washable glass instead of
+        throw-away plastic. The AI only <i>chooses</i> among those swaps and writes the text; it never makes up numbers.</li>
+      <li>Expected for the demo plan: usually swaps for the <i>plastic droppers</i>, the <i>plastic tubes</i> and the
+        large <i>clean workbench</i> (use the small one: less electricity). With "Green contract" the workbench swap
+        saves nothing, so the <i>pipette tips</i> take its place. The <i>bioreactor</i> is not touched (fixed by the protocol), and
+        neither are the 20 dishes for growing cells (they need the special <code>tc_treated</code> surface glass lacks).</li>
+      <li>The estimate updates by itself as you edit. <b>Ask the AI</b> lets the AI choose among the same swaps and write
+        the text (~10 s). It reads your "Notes for the AI", which the rules cannot: it may drop a swap only by quoting
+        your notes (checked), and the page shows what it changed compared with the rules. In our tests only Claude
+        understood the notes; the small local model keeps your data on this computer but just rewrites the text. Machine rows show the hours already booked in the booking assistant ("Use 12 h" copies them).</li>
+      <li>Try: tick <code>tc_treated</code> on the 30 dishes → no glass swap for them. Tick <code>locked</code> on the droppers
+        and write a reason → that suggestion disappears. Switch the estimate to "Green contract" → electricity drops to 0 and plastics dominate.</li>
+      <li><b>How do I know it worked?</b> (below the suggestions, open it) re-checks the answer and shows a ✓ for each rule.</li>
+    </ol>
+  </details>
+
+  <details class="card fold" id="eqBox">
+    <summary><b>0 · Your team and lab</b> <span class="small muted" id="labSummary"></span></summary>
+    <div id="labEditor" style="margin-top:10px"></div>
+    <p class="small muted" style="margin-top:8px">Only the equipment your team uses appears in the plan. Saved only in this
+      browser and shared with the booking page. No team name is stored or sent.</p>
+  </details>
+
+  <section class="card stack" aria-labelledby="planTitle">
+    <div class="spread">
+      <h2 id="planTitle">1 · Your plan</h2>
+      <span class="muted small mono" id="planId"></span>
+    </div>
+    <span class="vtag" data-v="default"></span>
+    <div class="tbl-wrap">
+      <table id="planTable">
+        <thead><tr><th>Item</th><th>Quantity</th><th>Needs</th><th>Locked</th><th></th></tr></thead>
+        <tbody id="lines"></tbody>
+      </table>
+    </div>
+    <span class="vtag" data-v="locked"></span>
+    <div class="row">
+      <button class="btn small" id="addLine">+ Add line</button>
+      <button class="btn small" id="resetPlan">Reset to demo plan</button>
+      <details class="small"><summary>What do the needs mean?</summary><ul id="tagHelp"></ul></details>
+    </div>
+    <div class="stack" style="gap:4px">
+      <label for="notes"><b>Notes for the AI</b> <span class="muted small">optional · names and e-mails are removed</span></label>
+      <textarea id="notes" rows="2" maxlength="1000" placeholder="e.g. Reusing tubes is not acceptable for our protocol (risk of contamination)."></textarea>
+      <span class="vtag" data-v="notes"></span>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="askAi">Ask the AI</button>
+      <select id="provider" aria-label="AI provider">
+        <option value="ollama">Local model (Qwen2.5 3B)</option>
+        <option value="claude">Claude Haiku 5.5</option>
+      </select>
+      <span class="small muted" id="providerNote"></span>
+    </div>
+    <span class="vtag" data-v="ai"></span>
+    <p class="err small" id="planErr"></p>
+  </section>
+
+  <div id="results" class="stack hidden">
+    <div class="grid2">
+      <section class="card stack" aria-labelledby="estTitle">
+        <div class="spread">
+          <h2 id="estTitle">2 · Estimate</h2>
+          <div class="seg small" role="group" aria-label="Electricity factor">
+            <button data-basis="location" aria-pressed="true" title="Average Dutch grid">NL grid</button>
+            <button data-basis="market" aria-pressed="false" title="TU/e's green electricity contract">Green contract</button>
+          </div>
+        </div>
+        <span class="vtag" data-v="basis"></span>
+        <div>
+          <div class="big mono" id="total"></div>
+          <div class="muted small" id="range"></div>
+          <div class="small" id="after"></div>
+        </div>
+        <div>
+          <div class="split" id="split"></div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="small" id="quality"></div>
+        <span class="vtag" data-v="quality"></span>
+        <details class="small">
+          <summary>How is this calculated?</summary>
+          <p class="muted" id="qualityMore" style="margin-top:6px"></p>
+          <p class="muted" id="factor" style="margin-top:6px"></p>
+        </details>
+        <span class="vtag" data-v="numbers"></span>
+      </section>
+      <section class="card stack" aria-labelledby="hotTitle">
+        <h2 id="hotTitle">Main sources</h2>
+        <div id="hotspots" class="stack"></div>
+        <p class="small muted" id="locked"></p>
+        <span class="vtag" data-v="hotspots"></span>
+      </section>
+    </div>
+
+    <section class="card stack" aria-labelledby="sugTitle">
+      <div class="spread">
+        <h2 id="sugTitle">3 · Suggestions</h2>
+        <label class="row small"><input type="checkbox" id="share"> Share my clicks (anonymous, lab level)</label>
+      </div>
+      <span class="vtag" data-v="share"></span>
+      <span class="vtag" data-v="curated"></span>
+      <p class="small muted" id="sourceLine"></p>
+      <div class="inwords small hidden" id="aiDiff"></div>
+      <span class="vtag" data-v="diff"></span>
+      <div id="suggestions" class="stack"></div>
+      <div class="row">
+        <button class="btn good hidden" id="apply">Apply accepted changes to my plan</button>
+      </div>
+      <div class="inwords small hidden" id="doneBox">
+        <div class="spread"><span><b>Done planning?</b> The booking page shows your plan's machine hours, ready to book.
+          <span id="doneNote"></span></span>
+          <button class="btn primary" id="toBook">Book the machines →</button></div>
+      </div>
+      <p class="small muted" id="procedures">Alternative procedures (another method, same result): one approved so far,
+        widefield instead of confocal imaging when 2D images are enough. More need the lab's expert panel; we do not
+        invent them.</p>
+    </section>
+
+    <details class="card fold" id="chkBox">
+      <summary><b id="chkSummary">How do I know it worked?</b></summary>
+      <p class="small muted" style="margin-top:8px">This page re-checks the answer, and the server re-checks every number with the calculator.</p>
+      <span class="vtag" data-v="checks"></span>
+      <ul id="checks" class="checks small"></ul>
+    </details>
+
+    <details class="card fold" id="supBox">
+      <summary><b id="supSummary">What the tool did not touch</b></summary>
+      <span class="vtag" data-v="suppressed"></span>
+      <ul id="suppressed" class="small"></ul>
+    </details>
+
+  </div>
+</div>
+
+<script src="profile.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const kg = v => `${Number(v).toFixed(1)} kg`;
+let CAT = null, plan = null, basis = "location", sset = null, decisions = {}, requestCode = "", sentPlan = null;
+
+const itemById = id => CAT.items.find(i => i.item_id === id) || {name: id, unit: "piece"};
+const shortName = id => itemById(id).name.replace(/\s*\(per use\)\s*$/, "");
+
+// Plain-language names: shared with the booking page (profile.js). The technical name stays in tooltips.
+const PLAIN = LabProfile.PLAIN;
+const TAGS = {
+  sterile: "must be germ-free",
+  rnase_free: "must be free of enzymes that destroy RNA (genetic material)",
+  low_retention: "liquid must not stick to the plastic",
+  gmp: "made under pharmaceutical quality rules",
+  single_use_required: "the protocol says: use once, then throw away",
+  animal_free: "no materials of animal origin",
+  tc_treated: "special surface so cells can stick and grow on it (glass does not have it)",
+};
+const label = id => (PLAIN[id] || [shortName(id)])[0];
+
+// "Show design values": the value each part of the page serves, and the rule in the tool that guarantees it
+const VALUES = {
+  default:    ["Human control", "Your plan is the default. Nothing changes unless you accept a suggestion and apply it."],
+  locked:     ["Academic freedom", "Rows you lock for the protocol are never touched. The reason stays with you."],
+  notes:      ["Privacy and security", "Names, e-mails and ids are removed. The text reaches the AI as data, and instructions in it are ignored."],
+  basis:      ["Honest accounting", "Both views are shown: the physical Dutch grid, and TU/e's green contract where electricity counts as zero."],
+  ai:         ["Privacy and footprint of the AI", "Fixed rules by default; the AI runs only when you ask, with the local model first. You see where your text goes before you send it."],
+  numbers:    ["Transparency", "Every number comes from the calculator (quantity × emission factor), with a range and a source. The AI never writes a number."],
+  quality:    ["Honesty about uncertainty", "Shows how much of the estimate rests on measured data and how much on assumptions, and which value to measure first."],
+  hotspots:   ["Transparency", "Shows where the CO₂ comes from, including the part fixed by protocol and out of the tool's reach."],
+  share:      ["Privacy", "Sharing is off by default. When on, only the click is sent, at lab level: no name, no plan."],
+  curated:    ["Expert oversight", "Only swaps the lab's experts approved in advance. At most 3, each worth at least 0.2 kg, so the tool does not nag."],
+  diff:       ["Contestability", "When the AI chooses, you see what it changed compared with the fixed rules, and the quote it relied on."],
+  card:       ["Transparency", "The trade-off and the confidence are always shown. A swap that could affect results says \"validate first\"."],
+  reject:     ["Autonomy", "Reject in one click. No reason is asked, and nothing is recorded about you."],
+  checks:     ["Accountability", "Every answer is re-checked against the rules, and you can see who chose and wrote it."],
+  suppressed: ["Transparency", "What the tool did not touch, and why."],
+};
+const vtag = k => `<span class="vtag"><b>${esc(VALUES[k][0])}</b><span>${esc(VALUES[k][1])}</span></span>`;
+function setValues(on) {
+  document.body.classList.toggle("values-on", on);
+  $("#valuesBtn").setAttribute("aria-pressed", on);
+  $("#valuesBtn").textContent = on ? "Hide design values" : "Show design values";
+  try { localStorage.setItem("labx.values", on ? "1" : "0"); } catch (e) { /* not remembered, still works */ }
+}
+document.querySelectorAll(".vtag[data-v]").forEach(el => { el.outerHTML = vtag(el.dataset.v); });
+$("#valuesBtn").onclick = () => setValues(!document.body.classList.contains("values-on"));
+setValues(new URLSearchParams(location.search).get("values") === "1"
+          || (() => { try { return localStorage.getItem("labx.values") === "1"; } catch (e) { return false; } })());
+const what = id => (PLAIN[id] || [, ""])[1];
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await r.json();
+  if (!r.ok) throw Object.assign(new Error(data.error || r.status), {data});
+  return data;
+}
+
+// --- team profile: shared with the booking page (profile.js, browser only) -------------------
+function renderLabSummary() {   // same text as the booking page's "Team & lab" button
+  $("#teamlabBtn").textContent = $("#labSummary").textContent = LabProfile.summary(CAT.labs);
+}
+$("#teamlabBtn").onclick = () => { $("#eqBox").open = true; $("#eqBox").scrollIntoView({block: "start", behavior: "smooth"}); };
+LabProfile.onChange(() => { renderLabSummary(); if (plan) renderPlan(); });
+
+// items a line may use: every consumable + the team's equipment (+ the line's own item, so nothing silently changes)
+const selectable = keep => CAT.items.filter(i => i.kind !== "equipment" || LabProfile.uses(i.item_id) || i.item_id === keep);
+
+// --- plan editor ---------------------------------------------------------------------
+// --- the plan and its settings survive a page reload (browser only, like the team profile) ---
+const DRAFT_KEY = "labx.plan.draft";
+function saveDraft() {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({plan, basis, provider: $("#provider").value})); }
+  catch (e) { /* storage unavailable: the page still works, it just forgets on reload */ }
+}
+function loadDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    const known = new Set(CAT.items.map(i => i.item_id));
+    return d && d.plan && Array.isArray(d.plan.lines) && d.plan.lines.every(l => known.has(l.item_id)) ? d : null;
+  } catch (e) { return null; }
+}
+// --- what the booking assistant already booked (data/confirmed_bookings.csv via GET /api/plan) -----
+let BOOKED = null;   // {equipment_id: {hours, sessions, fixed}} or null if nothing is confirmed yet
+async function loadBooked() {
+  try {
+    const rows = (await api("/api/plan")).bookings || [];
+    const ms = s => Date.parse(s.replace(" ", "T") + ":00Z");
+    BOOKED = rows.length ? {} : null;
+    rows.forEach(r => {
+      const b = BOOKED[r.equipment_id] ||= {hours: 0, sessions: 0, fixed: false};
+      b.hours += (ms(r.end) - ms(r.start)) / 3600e3 * (Number(r.shelves) || 1);   // shelf-hours for incubators
+      b.sessions += 1;
+      b.fixed = b.fixed || r.movable === "no";
+    });
+  } catch (e) { BOOKED = null; }
+}
+function bookedNote(ln, idx) {
+  if (itemById(ln.item_id).kind !== "equipment") return "";
+  const b = BOOKED?.[ln.item_id];
+  if (!b) return `<div class="small muted">Not booked yet. <a href="/bookings">Book it →</a></div>`;
+  const h = Math.round(b.hours * 10) / 10, same = Math.abs(h - Number(ln.quantity)) < 0.05;
+  return `<div class="small ${same ? "muted" : "warnline"}">Booked: ${h} h in ${b.sessions} session${b.sessions > 1 ? "s" : ""}${b.fixed ? " (fixed)" : ""}
+    ${same ? "✓" : `<button class="btn small" data-useh="${idx}" data-hours="${h}">Use ${h} h</button>`}</div>`;
+}
+document.addEventListener("visibilitychange", async () => {   // back from the booking tab: refresh
+  if (document.visibilityState === "visible" && CAT) { await loadBooked(); renderPlan(); }
+});
+
+let autoTimer = null;
+// "Book the machines" stays once every suggestion was decided, also after "Apply" recalculates the plan;
+// any other edit of the plan means the researcher is planning again
+let readyToBook = false, appliedCount = 0;
+function changed(keepReady = false) {   // any edit: save it and recalculate with the rules (debounced; the AI only on request)
+  if (!keepReady) { readyToBook = false; appliedCount = 0; }
+  saveDraft();
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(() => run(false), 350);
+}
+function setBasis(b) {
+  basis = b;
+  document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x.dataset.basis === b));
+}
+
+const needsLabel = ln => (ln.requirements || []).length ? ln.requirements.join(", ") : "none";
+function renderPlan() {
+  saveDraft();
+  $("#planId").textContent = plan.plan_id + " · kept in this browser";
+  const opts = keep => selectable(keep).map(i => `<option value="${esc(i.item_id)}" title="${esc(i.name)}">${esc(label(i.item_id))}${i.kind === "equipment" ? " (hours)" : ""}</option>`).join("");
+  $("#lines").innerHTML = plan.lines.map((ln, idx) => `
+    <tr>
+      <td class="item"><select data-i="${idx}" data-f="item_id" aria-label="Item" title="${esc(what(ln.item_id))}">${opts(ln.item_id)}</select>
+          ${bookedNote(ln, idx)}
+          ${itemById(ln.item_id).kind === "equipment" && !LabProfile.uses(ln.item_id)
+            ? '<div class="small warnline">Not in your team\'s equipment: tick it under "Your team and lab" or change it.</div>' : ""}</td>
+      <td><input type="number" min="0.01" step="any" data-i="${idx}" data-f="quantity" value="${esc(ln.quantity)}" aria-label="Quantity">
+          <span class="muted small">${esc(itemById(ln.item_id).unit)}</span></td>
+      <td>${itemById(ln.item_id).kind === "equipment" ? '<span class="muted small">—</span>'
+        : `<details class="req"><summary>${esc(needsLabel(ln))}</summary><div class="tags">${CAT.requirements.map(t => `<button class="tag" data-i="${idx}" data-tag="${t}" title="${esc(TAGS[t] || "")}" aria-pressed="${(ln.requirements || []).includes(t)}">${t}</button>`).join("")}</div></details>`}</td>
+      <td><label class="row small"><input type="checkbox" data-i="${idx}" data-f="locked" ${ln.locked ? "checked" : ""}> locked</label>
+          <input type="text" placeholder="Why? (required)" data-i="${idx}" data-f="lock_reason" value="${esc(ln.lock_reason || "")}" class="${ln.locked ? "" : "hidden"}" aria-label="Lock reason"></td>
+      <td><button class="btn small" data-del="${idx}" aria-label="Remove line">×</button></td>
+    </tr>`).join("");
+  plan.lines.forEach((ln, idx) => { $(`select[data-i="${idx}"]`).value = ln.item_id; });
+}
+
+$("#lines").addEventListener("input", e => {
+  const el = e.target, idx = +el.dataset.i, f = el.dataset.f;
+  if (!f) return;
+  const ln = plan.lines[idx];
+  if (f === "quantity") ln.quantity = Number(el.value);
+  else if (f === "locked") { ln.locked = el.checked; if (!el.checked) delete ln.lock_reason; renderPlan(); }
+  else if (f === "item_id") { ln.item_id = el.value; ln.unit = itemById(el.value).unit; renderPlan(); }
+  else ln[f] = el.value;
+  changed();
+});
+$("#lines").addEventListener("click", e => {
+  const el = e.target;
+  if (el.dataset.tag) {
+    const ln = plan.lines[+el.dataset.i], set = new Set(ln.requirements || []);
+    set.has(el.dataset.tag) ? set.delete(el.dataset.tag) : set.add(el.dataset.tag);
+    ln.requirements = [...set];
+    el.setAttribute("aria-pressed", set.has(el.dataset.tag));
+    el.closest("details").querySelector("summary").textContent = needsLabel(ln);
+    changed();
+  } else if (el.dataset.del !== undefined) {
+    plan.lines.splice(+el.dataset.del, 1); renderPlan(); changed();
+  } else if (el.dataset.useh !== undefined) {   // take the hours booked in the booking assistant
+    plan.lines[+el.dataset.useh].quantity = +el.dataset.hours; renderPlan(); changed();
+  }
+});
+$("#addLine").onclick = () => {
+  const n = Math.max(0, ...plan.lines.map(l => +l.line_id.slice(1))) + 1;
+  const first = selectable()[0];
+  plan.lines.push({line_id: `L${n}`, item_id: first.item_id, quantity: 1, unit: first.unit});
+  renderPlan(); changed();
+};
+$("#resetPlan").onclick = () => { plan = structuredClone(CAT.plan); $("#notes").value = plan.notes || ""; renderPlan(); changed(); };
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { setBasis(b.dataset.basis); changed(); });
+const PROVIDER_NOTE = {
+  ollama: "Your plan and notes stay on this computer. In our tests this model did not understand the notes.",
+  claude: "Your plan and notes are sent to Anthropic, without names. In our tests it understood every note.",
+};
+function renderProviderNote() { $("#providerNote").textContent = anyLlm() ? PROVIDER_NOTE[$("#provider").value] || "" : ""; }
+$("#provider").addEventListener("change", () => { saveDraft(); renderProviderNote(); });
+$("#notes").addEventListener("input", e => { plan.notes = e.target.value; saveDraft(); });   // rules ignore notes
+
+function cleanPlan() {
+  const p = structuredClone(plan);
+  if (!(p.notes || "").trim()) delete p.notes;
+  p.lines.forEach(ln => {
+    if (!ln.requirements || !ln.requirements.length) delete ln.requirements;
+    if (!ln.locked) { delete ln.locked; delete ln.lock_reason; }
+  });
+  return p;
+}
+
+// --- results ---------------------------------------------------------------------------
+let runSeq = 0, aiInfo = null, quality = null;
+// what the AI left out because the notes rule it out: sent with later rules-only recalculations (the server checks
+// each quote against the current notes again), so "Apply" or an edit does not bring those swaps back
+let noteVetoes = [], keptVetoes = [];   // only the latest request may update the page (a slow AI answer must not overwrite a newer one)
+function setBusy(busy, ai) {   // only the AI is slow enough to grey out the results
+  $("#askAi").disabled = busy || !anyLlm();
+  $("#askAi").textContent = busy && ai ? "The AI is thinking… (~10 s)" : "Ask the AI";
+  $("#results").classList.toggle("busy", busy && ai);
+  document.querySelectorAll("#apply, #toBook, #suggestions button").forEach(b => { b.disabled = busy && ai; });
+}
+const anyLlm = () => !!(CAT && (CAT.llm.ollama || CAT.llm.claude));
+function planProblem() {   // plain-language checks before asking the server (which checks everything again)
+  const noReason = plan.lines.find(l => l.locked && !(l.lock_reason || "").trim());
+  if (noReason) return `Row ${noReason.line_id} is locked: write why (e.g. "required by the protocol").`;
+  const badQty = plan.lines.find(l => !(Number(l.quantity) > 0));
+  if (badQty) return `Row ${badQty.line_id}: the quantity must be more than 0.`;
+  if (!plan.lines.length) return "Add at least one row to the plan.";
+  return "";
+}
+async function run(ai = false) {
+  const problem = planProblem();
+  if (problem) { $("#planErr").textContent = problem; return; }
+  const mine = ++runSeq, asked = cleanPlan();   // the exact plan this answer will be checked against
+  $("#planErr").textContent = "";
+  setBusy(true, ai);
+  try {
+    const res = await api("/api/plan/suggest", {plan: asked, basis, use_llm: ai, provider: $("#provider").value,
+                                                note_exclusions: ai ? [] : noteVetoes});
+    if (mine !== runSeq) return;               // a newer request was sent meanwhile: drop this answer
+    sentPlan = asked; sset = res.suggestion_set; decisions = {}; aiInfo = res.ai || null; quality = res.quality || null;
+    if (ai) noteVetoes = sset.generator.proposer === "llm" ? (aiInfo?.left_out || []).map(l => ({equivalence_id: l.equivalence_id, reason: l.reason})) : [];
+    keptVetoes = ai ? [] : (res.note_exclusions || []);
+    requestCode = "REQ-" + crypto.getRandomValues(new Uint32Array(1))[0].toString(16).padStart(8, "0");
+    renderResults(res.errors);
+  } catch (e) {
+    if (mine === runSeq) $("#planErr").textContent = e.data && e.data.errors ? e.data.errors.join(" · ") : e.message;
+  } finally {
+    if (mine === runSeq) setBusy(false, ai);
+  }
+}
+
+function renderResults(errors) {
+  const est = sset.estimate, e = est.breakdown;
+  $("#results").classList.remove("hidden");
+  $("#total").textContent = kg(est.kg.typ) + " CO₂e";
+  $("#range").textContent = `range ${est.kg.low.toFixed(1)}–${est.kg.high.toFixed(1)} kg · ${est.kwh.toFixed(1)} kWh of equipment`;
+  const tot = e.embodied.typ + e.electricity.typ || 1;
+  $("#split").innerHTML = `<div class="emb" style="width:${100 * e.embodied.typ / tot}%"></div><div class="ele" style="width:${100 * e.electricity.typ / tot}%"></div>`;
+  $("#legend").innerHTML = `<span><span class="dot" style="background:var(--embodied)"></span>Consumables ${kg(e.embodied.typ)}</span>
+    <span><span class="dot" style="background:var(--electric)"></span>Electricity ${kg(e.electricity.typ)}</span>`;
+  const f = est.electricity;
+  $("#factor").textContent = f.basis === "market"
+    ? `Electricity at ${f.g_per_kwh} g/kWh: TU/e's green contract (direct emissions only).`
+    : `Electricity at ${f.g_per_kwh} g/kWh: NL grid average 2025. Switch to "green contract" to see TU/e's market-based view.`;
+  renderQuality();
+  const max = Math.max(...est.hotspots.map(h => h.kg_typ), 1);
+  $("#hotspots").innerHTML = est.hotspots.map(h => `
+    <div class="hot"><span title="${esc(shortName(h.item_id || h.equipment_id))}">${esc(label(h.item_id || h.equipment_id))} ${h.locked ? '<span class="chip lock">locked</span>' : ""}</span>
+      <div class="bar ${h.locked ? "locked" : ""}" style="width:${100 * h.kg_typ / max}%"></div>
+      <span class="mono small">${kg(h.kg_typ)}</span></div>`).join("");
+  $("#locked").textContent = est.locked_kg ? `${kg(est.locked_kg)} is in lines fixed by protocol: out of the tool's reach.` : "";
+  const g = sset.generator;
+  $("#sourceLine").textContent = g.proposer === "llm"
+    ? `Chosen by the AI (${g.model}) among the approved swaps. Edit the plan to go back to the fixed rules.`
+    : `Chosen by the fixed rules.${anyLlm() ? ' Press "Ask the AI" to let the AI choose and write them.' : ""}`
+      + (keptVetoes.length ? ` Still left out because of your notes: ${keptVetoes.map(v => {
+          const e = CAT.equivalences.find(x => x.equivalence_id === v.equivalence_id);
+          return `${label(e.item_id)} → ${label(e.alternative_id)} (${quoteOf(v.reason)})`; }).join("; ")}.` : "");
+  renderAiDiff();
+  renderSuggestions();
+  renderChecks(errors);
+  const SUP = {hard_constraint: "fixed by protocol", requirement_conflict: "no compatible alternative",
+               muted_by_user_feedback: "muted after repeated rejections", saving_below_threshold: "saving too small"};
+  const lineItem = id => (plan.lines.find(l => l.line_id === id) || {}).item_id;
+  $("#suppressed").innerHTML = sset.suppressed.length ? sset.suppressed.map(x =>
+    `<li><b>${esc(x.line_id)} · ${esc(label(lineItem(x.line_id)))}</b>: ${esc(SUP[x.reason] || x.reason)}${x.detail ? ` (${esc(x.detail)})` : ""}</li>`).join("")
+    : "<li class='muted'>Nothing.</li>";
+  $("#supSummary").textContent = `What the tool did not touch (${sset.suppressed.length})`;
+}
+
+const QLABEL = {measured: "measured", derived: "from published studies", estimate: "assumed (not measured yet)"};
+function renderQuality() {   // "how accurate is this?": the share of the estimate behind each kind of data
+  const box = $("#quality");
+  if (!quality) { box.innerHTML = ""; $("#qualityMore").innerHTML = ""; return; }
+  const order = ["measured", "derived", "estimate"].filter(k => quality.share_pct[k]);
+  const w = quality.widest;
+  box.innerHTML = `<b>How sure is this estimate?</b>
+    <div class="qbar">${order.map(k => `<div class="q-${k}" style="width:${quality.share_pct[k]}%" title="${esc(QLABEL[k])}"></div>`).join("")}</div>
+    <span class="muted">${order.map(k => `${Math.round(quality.share_pct[k])}% ${QLABEL[k]}`).join(" · ")}</span>`;
+  $("#qualityMore").innerHTML = `Each number is quantity × emission factor, with a low–high range and a source.`
+    + (w ? ` Most of the uncertainty (${Math.round(w.share_of_range_pct)}% of the range) comes from <i>${esc(label(w.item_id))}</i>`
+      + (w.confidence === "estimate" ? ", whose value is assumed: measuring it would help most." : ".") : "");
+}
+
+// 'Your notes say "We do not reuse…"' → '“We do not reuse…”' (the quote was checked against the notes by the server)
+const quoteOf = r => { const m = r.match(/["“]([^"”]+)["”]/); return `“${m ? m[1] : r.replace(/^your notes say\s*/i, "")}”`; };
+function renderAiDiff() {   // what the AI changed compared with the fixed rules, on the same plan
+  const box = $("#aiDiff");
+  if (!aiInfo || sset.generator.proposer !== "llm") { box.classList.add("hidden"); return; }
+  const key = x => x.line_id + "|" + x.equivalence_id;
+  const ai = sset.suggestions.map(s => ({line_id: s.line_ids[0], equivalence_id: s.change.equivalence_id}));
+  const rules = aiInfo.rules_choice, aiKeys = new Set(ai.map(key)), ruleKeys = new Set(rules.map(key));
+  const eqs = Object.fromEntries(CAT.equivalences.map(e => [e.equivalence_id, e]));
+  const swap = x => `${label(itemOfLine(x.line_id))} → ${label(eqs[x.equivalence_id]?.alternative_id)}`;
+  const reasons = Object.fromEntries(aiInfo.left_out.map(l => [key(l), l.reason]));
+  const left = rules.filter(x => !aiKeys.has(key(x))), added = ai.filter(x => !ruleKeys.has(key(x)));
+  const kept = ai.length - added.length;
+  box.innerHTML = `<b>Compared with the fixed rules:</b> the AI kept ${kept} of the ${rules.length} rule suggestion${rules.length === 1 ? "" : "s"}.`
+    + (left.length ? `<br>Left out: ${left.map(x => `<i>${esc(swap(x))}</i>${reasons[key(x)] ? ` (quoting your notes: ${esc(quoteOf(reasons[key(x)]))})` : " (no reason given)"}`).join("; ")}.` : "")
+    + (added.length ? `<br>Added instead: ${added.map(x => `<i>${esc(swap(x))}</i>`).join("; ")}.` : "")
+    + ((aiInfo.kept_without_quote || []).length ? `<br>Kept anyway: ${aiInfo.kept_without_quote.map(x => `<i>${esc(swap(x))}</i>`).join("; ")}. The AI wanted to leave ${aiInfo.kept_without_quote.length > 1 ? "them" : "it"} out, but your notes do not mention ${aiInfo.kept_without_quote.length > 1 ? "them" : "it"}, so it may not.` : "")
+    + ((aiInfo.omitted || []).length ? `<br>Skipped without a word and put back: ${aiInfo.omitted.map(x => `<i>${esc(swap(x))}</i>`).join("; ")}.` : "")
+    + (aiInfo.invalid_ids ? `<br>The AI also named ${aiInfo.invalid_ids} option(s) not on the approved list: ignored.` : "")
+    + (!left.length && !added.length ? " Same choice; only the wording differs." : "");
+  box.classList.remove("hidden");
+}
+
+function renderChecks(errors) {
+  const sugg = sset.suggestions, eqs = Object.fromEntries(CAT.equivalences.map(e => [e.equivalence_id, e]));
+  const lineOf = id => sentPlan.lines.find(l => l.line_id === id) || {};
+  const locked = sentPlan.lines.filter(l => l.locked).map(l => l.line_id);
+  const touched = sugg.map(s => s.line_ids[0]);
+  const notApproved = sugg.filter(s => { const e = eqs[s.change.equivalence_id];
+    return !(e && e.item_id === lineOf(s.line_ids[0]).item_id && e.alternative_id === s.change.alternative_id); });
+  const approved = !notApproved.length;
+  const reqOk = sugg.every(s => { const e = eqs[s.change.equivalence_id] || {incompatible_with: ""};
+    const bad = e.incompatible_with.split(";").filter(Boolean);
+    return !(lineOf(s.line_ids[0]).requirements || []).some(r => bad.includes(r)); });
+  const sorted = sugg.every((s, i) => i === 0 || sugg[i - 1].saving_kg.typ >= s.saving_kg.typ);
+  const g = sset.generator;
+  const rows = [
+    [!errors.length, "The numbers come from the calculator, not from the AI",
+      errors.length ? errors.join(" · ") : "The server recomputed every kg and found no difference."],
+    [!touched.some(id => locked.includes(id)), "Rows locked by the protocol were not touched",
+      locked.length ? `Locked: ${locked.map(id => label(lineOf(id).item_id)).join(", ")}.` : "No row is locked."],
+    [approved, "Every swap is on the experts' approved list", approved
+      ? `${sugg.length} swap(s) checked against the list of ${CAT.equivalences.length}.`
+      : notApproved.map(s => `${s.id} (${s.change.equivalence_id}) does not match row ${s.line_ids[0]}, which now holds `
+          + `${label(lineOf(s.line_ids[0]).item_id || "nothing")}.`).join(" ") + " Edit the plan or ask the AI again."],
+    [reqOk, "Requirements respected", "No swap breaks a tag you set (e.g. tc_treated, single_use_required)."],
+    [sugg.length <= 3 && sorted && new Set(touched).size === touched.length, "At most 3 suggestions, biggest saving first, one per row",
+      `${sugg.length} suggestion(s).`],
+    [!errors.length, "No names of people or research groups in the text", "Checked by the server on every text."],
+    [null, "Who chose and wrote the suggestions",
+      g.proposer === "llm" ? `The AI (${g.model}) chose among the approved swaps; text by ${g.phraser === "llm" ? "the AI" : g.phraser === "mixed" ? "the AI, with some fixed templates" : "fixed templates"}. Instructions version: ${g.prompt_version} (see PROMPTS.md).`
+                           : "No AI this time: fixed rules chose and templates wrote the text."],
+  ];
+  const failed = rows.filter(r => r[0] === false).length;
+  $("#chkSummary").innerHTML = failed ? `<span class="ko">✗</span> How do I know it worked? ${failed} problem${failed > 1 ? "s" : ""}`
+    : `<span class="ok">✓</span> How do I know it worked? All ${rows.filter(r => r[0] !== null).length} checks passed`;
+  if (failed) $("#chkBox").open = true;
+  $("#checks").innerHTML = rows.map(([ok, title, detail]) =>
+    `<li><span class="${ok === null ? "info" : ok ? "ok" : "ko"}">${ok === null ? "i" : ok ? "✓" : "✗"}</span>
+     <span><b>${esc(title)}</b><br><span class="muted">${esc(detail)}</span></span></li>`).join("");
+}
+
+const itemOfLine = id => (sentPlan.lines.find(l => l.line_id === id) || {}).item_id;
+
+function noSuggestionReason() {   // why the list is empty, in the researcher's terms
+  const aiDropped = aiInfo && sset.generator.proposer === "llm" ? aiInfo.left_out : [];
+  if (aiDropped.length) return `No suggestion left: the AI left out ${aiDropped.length === 1 ? "the only remaining swap" : `all ${aiDropped.length} remaining swaps`} `
+    + `because your notes rule ${aiDropped.length === 1 ? "it" : "them"} out (see the box above). Change the notes and ask again to see ${aiDropped.length === 1 ? "it" : "them"}. Your plan is ready to book.`;
+  if (sentPlan.lines.some(l => calcEq(l.item_id))) return "No suggestion: what is left would save less than 0.2 kg, or is locked or blocked by a need you set (see \"What the tool did not touch\"). Your plan is ready to book.";
+  return "No suggestion: your plan already uses the approved greener options, or nothing in it has an approved alternative. Your plan is ready to book.";
+}
+const calcEq = itemId => CAT.equivalences.some(e => e.item_id === itemId);
+function renderSuggestions() {
+  const box = $("#suggestions");
+  if (!sset.suggestions.length) box.innerHTML = `<p class="inwords small">${esc(noSuggestionReason())}</p>`;
+  else box.innerHTML = sset.suggestions.map((s, i) => {
+    const d = decisions[s.id];
+    const conf = {high: "good", medium: "warn", low: "bad"}[s.confidence];
+    return `<article class="sugg ${d || ""}">
+      <div class="spread"><h3>${esc(s.headline)}</h3><span class="saving mono">−${kg(s.saving_kg.typ)}</span></div>
+      <p class="small muted">Instead of <i>${esc(label(itemOfLine(s.line_ids[0])))}</i>, use <i>${esc(label(s.change.alternative_id))}</i>
+        · ${s.saving_pct.toFixed(0)}% less for this line</p>
+      <div class="meta"><span class="chip ${conf}">confidence: ${esc(s.confidence)}</span>
+        ${s.requires_validation ? '<span class="chip warn">validate first</span>' : ""}
+        ${s.needs_other_party ? '<span class="chip plain">needs another group</span>' : ""}</div>
+      <p class="give small" style="margin-top:8px"><b>What you give up:</b> ${esc(s.tradeoff)}</p>
+      <details class="small" style="margin-top:6px"><summary>Why this helps</summary>
+        <p style="margin-top:4px">${esc(s.why)}</p>
+        <p class="muted">Range ${s.saving_kg.low.toFixed(1)}–${s.saving_kg.high.toFixed(1)} kg CO₂e.</p></details>
+      ${i === 0 ? vtag("card") : ""}
+      <div class="row" style="margin-top:10px">
+        ${d ? `<span class="chip ${d === "accepted" ? "good" : "plain"}">${d === "accepted" ? (s.requires_validation ? "accepted · ask the lab manager" : "accepted") : "rejected"}</span>
+               <button class="btn small" data-undo="${s.id}">Undo</button>`
+            : `<button class="btn small good" data-act="accept" data-id="${s.id}">${s.requires_validation ? "Accept · ask lab manager" : "Accept"}</button>
+               <button class="btn small" data-act="reject" data-id="${s.id}">Reject</button>`}
+      </div>${i === 0 ? vtag("reject") : ""}</article>`;
+  }).join("");
+  const acc = sset.suggestions.filter(s => decisions[s.id] === "accepted");
+  const k = sset.estimate.kg, minus = b => acc.reduce((t, s) => t - s.saving_kg[b], k[b]);
+  $("#after").innerHTML = acc.length ? `<span class="chip good">after accepted changes: ${kg(minus("typ"))} (${minus("low").toFixed(1)}–${minus("high").toFixed(1)})</span>` : "";
+  $("#apply").classList.toggle("hidden", !acc.length);
+  // "Book the machines" only once every suggestion has been accepted or rejected: the researcher decides first
+  // nothing left to decide (no suggestion) counts as decided: the researcher can go on to book
+  if (sset.suggestions.every(s => decisions[s.id])) readyToBook = true;
+  $("#doneBox").classList.toggle("hidden", !readyToBook);
+  const n = x => `${x} accepted change${x > 1 ? "s" : ""}`;
+  $("#doneNote").textContent = acc.length ? `Your ${n(acc.length)} ${acc.length > 1 ? "are" : "is"} applied to the plan first.`
+    : appliedCount ? `Your ${n(appliedCount)} ${appliedCount > 1 ? "are" : "is"} already in the plan.` : "";
+}
+
+$("#suggestions").addEventListener("click", async e => {
+  const el = e.target;
+  if (el.dataset.undo) { delete decisions[el.dataset.undo]; return renderSuggestions(); }
+  if (!el.dataset.act) return;
+  const s = sset.suggestions.find(x => x.id === el.dataset.id);
+  decisions[s.id] = el.dataset.act === "accept" ? "accepted" : "rejected";
+  renderSuggestions();
+  if ($("#share").checked) {   // opt-in only; no researcher id, random request code, date only
+    const line = plan.lines.find(l => l.line_id === s.line_ids[0]);
+    const today = new Date().toISOString().slice(0, 10) + " 00:00";
+    try {
+      await api("/api/plan/feedback", [{event_id: "FB-0000", request_id: requestCode, suggestion_id: s.id,
+        suggestion_type: s.type, item_id: line.item_id, action: el.dataset.act, timestamp: today}]);
+    } catch (err) { console.warn("feedback not saved", err); }
+  }
+});
+
+function applyAccepted() {   // swap the accepted items in the plan (kept in this browser, read by the booking page)
+  let applied = 0;
+  sset.suggestions.filter(s => decisions[s.id] === "accepted").forEach(s => {
+    const ln = plan.lines.find(l => l.line_id === s.change.line_id);
+    if (!ln || ln.item_id !== itemOfLine(s.change.line_id)) return;   // already applied or edited meanwhile
+    ln.item_id = s.change.alternative_id; ln.quantity = s.change.new_quantity; ln.unit = itemById(ln.item_id).unit;
+    applied += 1;
+  });
+  return applied;
+}
+$("#apply").onclick = () => { appliedCount += applyAccepted(); renderPlan(); changed(true); };
+$("#toBook").onclick = () => { clearTimeout(autoTimer); applyAccepted(); saveDraft(); location.href = "/bookings"; };
+$("#askAi").onclick = () => { clearTimeout(autoTimer); run(true); };
+
+(async () => {
+  CAT = await api("/api/plan/catalog");
+  const draft = loadDraft();
+  plan = draft ? draft.plan : structuredClone(CAT.plan);
+  if (draft?.basis) setBasis(draft.basis);
+  [...$("#provider").options].forEach(o => { o.disabled = !CAT.llm[o.value]; });
+  $("#provider").value = CAT.llm.ollama ? "ollama" : "claude";
+  if (draft && CAT.llm[draft.provider]) $("#provider").value = draft.provider;
+  $("#provider").disabled = !anyLlm();
+  $("#askAi").disabled = !anyLlm();
+  renderProviderNote();
+  if (!anyLlm()) $("#askAi").title = "No AI on the server: start `ollama serve` (or add a Claude key) and reload";
+  $("#modeChips").innerHTML = Object.entries(CAT.llm).map(([k, v]) =>
+    `<span class="chip ${v ? "good" : "plain"}">${k === "ollama" ? "local AI" : "Claude API"}: ${v ? "available" : "off"}</span>`).join("");
+  LabProfile.mountEditor($("#labEditor"), CAT.labs, {label: (id, name) => PLAIN[id] ? label(id) : name, what});
+  renderLabSummary();
+  $("#procedures").classList.toggle("hidden", CAT.equivalences.some(e => e.type === "method"));
+  $("#tagHelp").innerHTML = Object.entries(TAGS).map(([k, v]) => `<li><code>${k}</code>: ${esc(v)}</li>`).join("");
+  await loadBooked();
+  $("#notes").value = plan.notes || "";
+  renderPlan();
+  run(false);
+})();
+</script>
+</body>
+</html>

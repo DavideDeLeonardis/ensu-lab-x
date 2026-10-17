@@ -2,8 +2,8 @@
 Phrasing: turns an already-ranked, already-calculator-verified proposal into
 the human-readable `headline` / `why` / `tradeoff` fields the schema wants.
 
-This is deliberately the ONLY file in src/ai/ that may call an LLM. By the
-time a proposal reaches here:
+The templates live here; the LLM versions are in booking_ai.py (bookings) and plan_engine.py
+(plans), and fall back to these templates. By the time a proposal reaches here:
   - it has already passed Rule 1 (never touches movable == "no")
   - it has already passed Rule 8 (saving >= 0.2 kg)
   - its saving numbers already came from calculator.py (Rule 5)
@@ -149,19 +149,3 @@ def template_phraser(proposal: RankedProposal, ctx: PhraseContext) -> PhrasedTex
         )
 
     raise ValueError(f"unknown proposal type: {proposal.type}")
-
-
-def llm_phraser(proposal: RankedProposal, ctx: PhraseContext) -> PhrasedText:
-    """
-    STUB -- wire up your provider of choice here. The prompt should pass in
-    ONLY: proposal.type, proposal.change, proposal.saving_result (already
-    computed), proposal.notes, the device names and times from `ctx`, and
-    ANONYMOUS_OTHER_PARTY as the required stand-in for any other-party
-    reference. Never pass group or researcher identifiers into the prompt
-    (Rule 7) -- if the LLM doesn't have them, it can't leak them.
-
-    Suggested guardrail: fall back to template_phraser() if the LLM call fails
-    or its text fails src/contract/validate.py, so a flaky network call never
-    blocks the whole SuggestionSet from being produced.
-    """
-    raise NotImplementedError("plug in your LLM call here; template_phraser() works meanwhile")

@@ -1,12 +1,41 @@
 # src/ui: interface (UI team)
 
-The booking assistant's interface. It runs in two ways:
+**One app, two assistants.** `serve.py` opens a start page (`home.html`) where the researcher chooses:
+- **Plan an experiment** (`/plan`, `plan.html` + `plan_api.py`): the current design, consumables + equipment, AI
+  optional. See "Experiment plan assistant" below.
+- **Book equipment** (`/bookings`, `app_template.html`): the first prototype, described in the rest of this file.
+
+**AI in both assistants** (live mode, if `ollama serve` runs or a Claude key is available: the team key or `ANTHROPIC_API_KEY`): the "Ask the AI" button
+(plans) and a "Let the AI choose and phrase" switch next to *Check footprint* (bookings). A line above the
+suggestions says whether the AI or the fixed rules chose them. Unavailable: rules + templates.
+
+**The two pages show each other's choices** (same browser):
+- *Plan → bookings*: a "From your plan" card in `/bookings` lists the plan's machine rows (read from the plan kept in
+  the browser, `labx.plan.draft`) with planned vs booked hours. "Book N h" opens New booking with the device, the
+  hours (one session of up to 4 h, or the whole block for a row locked by the protocol) and the first free slot in
+  lab hours already filled in. An accepted swap in the plan (e.g. small workbench) shows up here as the device to book.
+- *Bookings → plan*: each machine row in `/plan` shows the hours already booked (confirmed bookings, `GET /api/plan`);
+  "Use N h" copies them into the plan.
+- Both refresh by themselves when the other tab changes or comes back to the front.
+
+**Plan page interaction**: the estimate and the rule-based suggestions update by themselves as you edit (instant);
+"Ask the AI" lets the AI choose among the same approved swaps and write the text (~10 s). Editing the plan again goes
+back to the rules. Both pages show the same "Team & lab: …" button (`LabProfile.summary`).
+
+**Shared team profile** (`profile.js`): team name, lab and the devices the team uses, kept **only in the
+browser** (`localStorage`) and shared by both pages. Change it in one page ("Your team and lab" in the plan
+assistant, "Team & lab" in the booking assistant) and the other updates at once, even in another open tab. The plan
+offers only the team's devices; "New booking" lists only the team's devices; a booking or plan line on a device
+the team does not use is flagged, never changed silently. The team name is never sent to the server. Labs come
+from `GET /api/labs` (`data/labs.json`); no profile = every device, as before. Only bookable devices are listed: always-on
+infrastructure (freezers, heat block, water bath) is not part of an experiment. Both pages use the same plain-language
+device names (`LabProfile.label`), with the technical name in tooltips.
 
 ```bash
-python3 src/ui/serve.py                # LIVE: http://127.0.0.1:8000, real engine + calculator, plan and feedback saved
-python3 src/ui/serve.py --reset-demo   # same, but first delete the saved plan and empty the feedback log
-python3 src/ui/serve.py --placeholders # same, but the explanation panels say "to be filled in" (demo)
-open src/ui/index.html                 # DEMO: plain file, the baked-in AI output for A1, nothing saved
+python3 src/ui/serve.py                # LIVE: http://127.0.0.1:8000 → start page; real engines + calculators
+python3 src/ui/serve.py --reset-demo   # same, but first delete the saved booking plan and empty the feedback log
+python3 src/ui/serve.py --placeholders # same, but the booking explanation panels say "to be filled in" (demo)
+open src/ui/index.html                 # DEMO: booking page as a plain file, the baked-in AI output for A1, nothing saved
 ```
 **`--placeholders`** (also for `build.py`) keeps the four explanation panels ("What is this assistant…",
 "How is this calculated?", "What wasn't touched, and why?", "What's shared if you tick this?") clickable, but
@@ -58,11 +87,14 @@ That's AI-side work living in `src/ui/` as temporary glue. Once the AI team expo
 ## Files
 | File | What |
 |---|---|
-| `app_template.html` | the UI (HTML + CSS + JS, one file). Edit this one |
+| `home.html` | start page: choose the plan or the booking assistant |
+| `plan.html` + `plan_api.py` | experiment plan assistant (`/plan`, API under `/api/plan/...`) |
+| `profile.js` | shared team profile (team, lab, devices), browser only; used by both assistants |
+| `app_template.html` | the booking assistant (HTML + CSS + JS, one file). Edit this one |
 | `build.py` | bakes a SuggestionSet + a slim lab lookup into the page → `index.html` (`--suggestions` for another file) |
-| `index.html` | built output for demo mode |
+| `index.html`, `index_placeholders.html` | built booking page for demo mode (opened as a file) |
 | `engine.py` | live-mode glue: `price_request()`, `save_feedback()`, `load_plan()` / `save_plan()` (confirmed bookings), `reset_demo()`. Computes nothing itself; see "The JSON boundary" |
-| `serve.py` | local server: `GET /`, `GET /api/health`, `GET /api/plan`, `POST /api/suggest`, `POST /api/feedback`, `POST /api/book`; `--reset-demo` |
+| `serve.py` | the one server: `/`, `/plan`, `/bookings`, `/profile.js`, `GET /api/labs`, the plan API, and the booking API (`GET /api/health`, `GET /api/plan`, `POST /api/suggest`, `POST /api/feedback`, `POST /api/book`); `--reset-demo` |
 | `price_request.py` | command-line pricing of a `request.json` from the page (demo-mode route) |
 
 ## Screens
@@ -93,3 +125,32 @@ headlessly in both modes, at desktop and phone width:
 - three opted-in rejections of the autoclave merge went into `feedback_log.json`, and the pair was then muted
   and named in the UI
 - the log was reset to `[]` afterwards
+
+## Experiment plan assistant (`/plan`: `plan.html` + `plan_api.py`)
+Served by `serve.py` (API under `/api/plan/...`, next to the booking API, which is unchanged).
+- **Your team and lab**: the shared team profile above; only the team's equipment appears in the plan. Labs and their equipment come from `data/labs.json` (table `LABS` in `src/lab/generate.py`); only Lab X
+  exists until real lab data is added. Not part of the contract: it only filters the page.
+- **Layout**: only what the researcher acts on is open (plan, estimate, suggestions). The team profile, the
+  requirement tags of each row ("Needs"), how the estimate is calculated, why a swap helps, the checks and what
+  was not touched are dropdowns; each dropdown's summary already says the result (e.g. "✓ All 6 checks passed").
+- **Your plan**: edit items (hover for a plain explanation), quantities, needs (`sterile`, `tc_treated`, …) and
+  locked lines; starts from `data/plan_A1.json`.
+- **Electricity factor** (in the Estimate card): NL grid (location, default) or TU/e's green contract (market).
+- **Ask the AI + provider**: local model (if `ollama serve` is running with `qwen2.5:3b`) or Claude (if the
+  server has a Claude key); otherwise only the rules. "How do I know it worked?" says who chose and wrote the
+  suggestions, the prompt versions, and whether the output passed the contract check.
+- **Estimate**: total range, consumables vs electricity, "How sure is this estimate?" (share of measured,
+  published and assumed data, from `quality` in the API answer), main sources (locked ones marked).
+- **Suggestions**: Accept (or "Accept · ask lab manager" when validation is needed) / Reject in one click;
+  "after accepted changes" = `estimate.kg` − accepted `saving_kg`; "Apply accepted changes" swaps the items in
+  the plan and recalculates. Once every suggestion is accepted or rejected, "Book the machines →" appears: it
+  applies the accepted changes and opens the booking page, whose "From your plan" card lists the machine hours.
+  It stays after "Apply accepted changes" (which recalculates and may show new suggestions); it goes away when the
+  researcher edits the plan again, until the new suggestions are decided. With no suggestion at all (plan already
+  optimised, or the AI left out the last swap because of the notes) the page says why and offers the button at once.
+- **Notes keep counting after the AI**: the swaps the AI left out with a quote from the notes are sent back with
+  every later rules-only recalculation (`note_exclusions` in `/api/plan/suggest`); the server checks each quote
+  against the current notes again, so an exclusion lapses as soon as the sentence is removed. Without this, "Apply"
+  brought back the glass pipettes the notes had ruled out.
+- **Feedback** goes to `data/feedback_log.json` only if "Share my clicks" is ticked; events carry `item_id`, a
+  random request code and the date only (same privacy choices as the booking UI).

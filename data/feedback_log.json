@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "event_id": "FB-0001",
+    "request_id": "REQ-01558857",
+    "suggestion_id": "S1",
+    "suggestion_type": "coordinate",
+    "equipment_id": "AUT-1",
+    "action": "accept",
+    "timestamp": "2026-10-15 00:00"
+  }
+]

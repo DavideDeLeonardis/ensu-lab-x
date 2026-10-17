@@ -1,0 +1,115 @@
+{
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "$id": "experiment_plan.schema.json",
+   "title": "ExperimentPlan",
+   "description": "Input to the plan engine: one planned experiment as quantities of consumables, methods and equipment use. Contains NO researcher or group identifier; free text is untrusted.",
+   "type": "object",
+   "required": [
+      "plan_id",
+      "lines"
+   ],
+   "additionalProperties": false,
+   "properties": {
+      "plan_id": {
+         "type": "string",
+         "pattern": "^PLAN-[A-Za-z0-9-]+$",
+         "description": "Opaque id, e.g. 'PLAN-2026-0042'. Must not contain a researcher or group id."
+      },
+      "title": {
+         "type": "string",
+         "maxLength": 120,
+         "description": "Free text, untrusted"
+      },
+      "notes": {
+         "type": "string",
+         "maxLength": 1000,
+         "description": "Free text, untrusted"
+      },
+      "lines": {
+         "type": "array",
+         "minItems": 1,
+         "items": {
+            "type": "object",
+            "required": [
+               "line_id",
+               "item_id",
+               "quantity",
+               "unit"
+            ],
+            "additionalProperties": false,
+            "properties": {
+               "line_id": {
+                  "type": "string",
+                  "pattern": "^L\\d+$"
+               },
+               "item_id": {
+                  "type": "string",
+                  "description": "Key into data/consumables.csv or data/equipment.csv (unit 'h'; modes hourly, shelf = one shelf, day, continuous)"
+               },
+               "quantity": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+               },
+               "unit": {
+                  "type": "string",
+                  "enum": [
+                     "piece",
+                     "mL",
+                     "L",
+                     "g",
+                     "kg",
+                     "h",
+                     "run"
+                  ],
+                  "description": "Must equal the catalogue unit of item_id"
+               },
+               "requirements": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                     "type": "string",
+                     "enum": [
+                        "sterile",
+                        "rnase_free",
+                        "low_retention",
+                        "gmp",
+                        "single_use_required",
+                        "animal_free",
+                        "tc_treated"
+                     ]
+                  }
+               },
+               "locked": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "true = the tool must not touch this line"
+               },
+               "lock_reason": {
+                  "type": "string",
+                  "description": "Required when locked is true"
+               }
+            },
+            "if": {
+               "properties": {
+                  "locked": {
+                     "const": true
+                  }
+               },
+               "required": [
+                  "locked"
+               ]
+            },
+            "then": {
+               "required": [
+                  "lock_reason"
+               ],
+               "properties": {
+                  "lock_reason": {
+                     "minLength": 1
+                  }
+               }
+            }
+         }
+      }
+   }
+}

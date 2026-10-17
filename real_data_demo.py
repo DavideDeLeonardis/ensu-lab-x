@@ -50,5 +50,5 @@ result = build_suggestion_set(
 )
 
 print(json.dumps(result, indent=2))
-print(f"\n--- sanity check: estimate.kg.typ should be close to README's ~24.9 kg ---")
+print("\n--- sanity check: estimate.kg.typ should be close to README's ~24.9 kg ---")
 print(f"got: {result['estimate']['kg']['typ']}")

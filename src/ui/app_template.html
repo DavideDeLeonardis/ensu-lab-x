@@ -178,22 +178,38 @@ pre{font-family:var(--mono);font-size:12px;background:var(--sunk);border-radius:
   .req-tbl td{border:none;padding:2px 8px}
   .req-tbl td:nth-child(1){grid-area:dev} .req-tbl td:nth-child(2){grid-area:when} .req-tbl td:nth-child(3){grid-area:flex} .req-tbl td:nth-child(4){grid-area:act}
 }
+/* "← All assistants": a clear way back to the start page */
+.backlink{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:13px;font-weight:500;
+  color:var(--accent);background:var(--accent-soft);border:1px solid transparent;border-radius:999px;
+  padding:5px 13px 5px 10px;margin-bottom:10px;text-decoration:none;line-height:1.2}
+.backlink:hover{border-color:var(--accent)}
+.backlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.backlink[hidden]{display:none}
+.backlink svg{width:14px;height:14px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
     <div>
+      <a href="/" class="backlink" data-home hidden><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All assistants</a>
       <div class="eyebrow">Lab X · booking assistant</div>
       <h1 id="title">Your bookings</h1>
       <div class="row" style="gap:12px"><span id="mode" class="chip plain">demo data</span>
-      <button class="btn link" data-about aria-expanded="false" aria-controls="about">What is this assistant, and who decides what?</button></div>
+      <button class="btn link" data-about aria-expanded="false" aria-controls="about">What is this assistant, and who decides what?</button>
+      <button class="btn link" data-teamlab hidden aria-expanded="false" aria-controls="teamlab" id="teamlabBtn">Team &amp; lab</button></div>
     </div>
     <ol class="steps" aria-label="Progress">
       <li data-step="1">1 Plan</li><li data-step="2">2 Review</li><li data-step="3">3 Done</li>
     </ol>
   </header>
   <section id="about" class="card" hidden style="margin-bottom:14px"></section>
+  <!-- team + lab + equipment, shared with the plan page (src/ui/profile.js); browser only, never sent -->
+  <section id="teamlab" class="card" hidden style="margin-bottom:14px">
+    <div class="spread" style="margin-bottom:10px"><h2>Your team and lab</h2><button class="btn link" data-teamlab>Close</button></div>
+    <p class="muted small" style="margin-bottom:10px">Only the devices your team uses appear in "New booking". Same choice as in the plan assistant.</p>
+    <div id="teamlabEditor"></div>
+  </section>
   <main id="app" aria-live="polite"></main>
 
   <details class="disclose" style="margin-top:32px">
@@ -206,13 +222,19 @@ pre{font-family:var(--mono);font-size:12px;background:var(--sunk);border-radius:
   </details>
 </div>
 
+<script src="profile.js"></script>
 <script>
+/* shared team profile (profile.js); if it is missing, every device counts as used */
+const LP = window.LabProfile || {get: () => null, uses: () => true, onChange() {}, mountEditor() {}};
 const DATA = /*__DATA__*/null;
 const LAB = DATA.lab;
 let SSET = DATA.suggestion_set;
 /* Live mode: served by src/ui/serve.py → the real engine prices every request and feedback is saved.
    Opened as a file → the baked-in SuggestionSet is used and nothing is saved. */
 let LIVE = false, MUTED = [];
+/* optional AI (live mode): which LLMs the server has, and whether the researcher wants it (src/ai/booking_ai.py) */
+let LLM_AV = {}, AI_BUSY = false;
+const aiAvailable = () => LIVE && (LLM_AV.ollama || LLM_AV.claude);
 /* Demo switch (build.py / serve.py --placeholders): explanation panels open but show a "to be filled in" box */
 const PLACEHOLDERS = !!DATA.placeholders;
 const placeholder = what => `<div class="placeholder" role="note"><span class="chip plain">to be filled in</span>
@@ -241,7 +263,8 @@ const gridAt = ms => LAB.grid[Math.floor((ms - EPOCH) / HOUR)];
 const gridAvg = (a, b) => { let s = 0, n = 0; for (let t = a; t < b; t += HOUR) { const v = gridAt(t); if (v != null) { s += v; n++; } } return n ? s / n : null; };
 const EQ = LAB.equipment;
 const eqName = id => EQ[id]?.name ?? id;
-const shortEq = id => eqName(id).replace(/\s*\(.*\)$/, "");
+/* same plain names as the plan page (profile.js); the technical name is in the device list's tooltip */
+const shortEq = id => LP.label ? LP.label(id, eqName(id).replace(/\s*\(.*\)$/, "")) : eqName(id).replace(/\s*\(.*\)$/, "");
 const nowTs = () => { const d = new Date(); const p = n => String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 
 const TYPE_LABEL = {reschedule: "Reschedule", share: "Share", coordinate: "Coordinate"};
@@ -436,7 +459,7 @@ function viewPlan() {
     const fixed = b.movable === "no", editing = state.form?.id === b.booking_id;
     const extra = b.load_pct ? ` · load ${b.load_pct}%` : "";
     return `<tr class="${b.isNew ? "new" : ""} ${editing ? "editing" : ""}">
-      <td><strong>${esc(shortEq(b.equipment_id))}</strong>${b.isNew ? ` <span class="chip type">new</span>` : ""}
+      <td><strong>${esc(shortEq(b.equipment_id))}</strong>${b.isNew ? ` <span class="chip type">new</span>` : ""}${LP.uses(b.equipment_id) ? "" : ` <span class="chip warn">not in your team's devices</span>`}
         <div class="muted small">${esc(b.purpose || "No purpose given")}${extra}</div></td>
       <td class="mono" style="white-space:nowrap">${esc(slot(b.start, b.end))}</td>
       <td>${fixed
@@ -448,13 +471,15 @@ function viewPlan() {
   }).join("");
 
   return `<div class="stack">
+    ${fromPlanCard()}
     ${state.form?.id === "__new__" ? bookingForm() : ""}
     ${state.undoDel ? `<div class="status ok" role="status" style="margin-top:0">Deleted <strong class="mono">${esc(shortEq(state.undoDel.row.equipment_id))} · ${esc(slot(state.undoDel.row.start, state.undoDel.row.end))}</strong>.<button class="btn link" data-undodel>Undo</button></div>` : ""}
-    ${SAVED_PLAN ? `<p class="muted small">Showing your last confirmed plan.</p>` : ""}
+    ${SAVED_PLAN ? `<p class="muted small">Showing your last confirmed plan (${SAVED_PLAN.length} booking${SAVED_PLAN.length === 1 ? "" : "s"}, saved in <code>data/confirmed_bookings.csv</code>).
+      <button class="btn link" data-go="demo">Reset to the demo request</button> (the file changes only when you confirm again)</p>` : ""}
     <div class="card stack">
       <div class="spread">
         <h2>Booking request</h2>
-        <div class="row"><span class="muted">${state.request.length} booking${state.request.length === 1 ? "" : "s"}${LAB.own_group ? ` · ${esc(LAB.own_group)}` : ""}</span>
+        <div class="row"><span class="muted">${state.request.length} booking${state.request.length === 1 ? "" : "s"}${(LP.get()?.team || LAB.own_group) ? ` · ${esc(LP.get()?.team || LAB.own_group)}` : ""}</span>
           ${state.form ? "" : `<button class="btn" data-new>+ New booking</button>`}</div>
       </div>
       <p class="muted">For each booking, say how far it could move. The assistant only looks at time, device and batching, never at your protocol, and it won't touch anything marked fixed.</p>
@@ -475,6 +500,58 @@ function viewPlan() {
     </div>
   </div>`;
 }
+
+/* ---------- "From your plan": machine hours of the experiment plan kept in this browser (src/ui/plan.html) ---------- */
+const PLAN_DRAFT_KEY = "labx.plan.draft";
+function planDraft() { try { return JSON.parse(localStorage.getItem(PLAN_DRAFT_KEY) || "null")?.plan || null; } catch { return null; } }
+const hoursOf = b => (parse(b.end) - parse(b.start)) / HOUR * (Number(b.shelves) || 1);   // shelf-hours for incubators
+const round1 = x => Math.round(x * 10) / 10;
+function planRows() {
+  const p = planDraft();
+  return p ? p.lines.filter(l => EQ[l.item_id]?.bookable).map(l => {
+    const booked = state.request.filter(b => b.equipment_id === l.item_id).reduce((s, b) => s + hoursOf(b), 0);
+    return {line: l, planned: Number(l.quantity), booked: round1(booked), left: round1(Number(l.quantity) - booked)};
+  }) : null;
+}
+function fromPlanCard() {
+  if (!LIVE) return "";
+  const rows = planRows();
+  if (!rows) return `<div class="card small muted">No experiment plan in this browser yet. <a href="/plan">Plan an experiment →</a> and its machine hours will show up here.</div>`;
+  return `<div class="card stack">
+    <div class="spread"><h2>From your plan</h2><a class="btn link" href="/plan">Open the plan</a></div>
+    <p class="muted small">Machine hours from the experiment plan in this browser, against the bookings below. "Book" opens a new booking with the device and the hours filled in; you only pick the day and time.</p>
+    ${rows.length ? `<div class="tbl-wrap"><table><tbody>${rows.map(r => `<tr>
+      <td><strong>${esc(shortEq(r.line.item_id))}</strong>${r.line.locked ? ` <span class="chip lock">🔒 fixed</span>` : ""}</td>
+      <td class="mono small">planned ${r.planned} h · booked ${r.booked} h</td>
+      <td style="text-align:right">${r.left > 0 ? `<button class="btn" data-bookplan="${esc(r.line.line_id)}">Book ${r.left} h</button>` : `<span class="chip good">✓ booked</span>`}</td>
+    </tr>`).join("")}</tbody></table></div>` : `<p class="muted small">Your plan has no machine hours.</p>`}
+  </div>`;
+}
+function draftFromPlan(line) {
+  const d = blankDraft(), left = planRows().find(r => r.line.line_id === line.line_id).left;
+  d.equipment_id = line.item_id; d.purpose = "From the experiment plan";
+  // a row fixed by the protocol is booked in one go and stays fixed; otherwise one session of up to 4 h, any day this week
+  const hours = line.locked ? left : Math.min(left, 4);
+  if (line.locked) { d.movable = "no"; d.constraint = line.lock_reason || ""; } else d.movable = "within week";
+  const half = 30 * 60e3, len = Math.ceil(hours * HOUR / half) * half;
+  const place = start => {
+    const end = Math.min(start + len, DATA_END);
+    d.sday = dayStart(start); d.stime = hhmm(start);
+    if (end === dayStart(end)) { d.eday = dayStart(end) - DAY; d.etime = "24:00"; } else { d.eday = dayStart(end); d.etime = hhmm(end); }
+  };
+  place(toMs(+d.sday, d.stime));
+  if (!line.locked) {   // first free slot this week, inside lab hours (Mon–Fri 08:00–20:00)
+    const monday = dayStart(parse("2026-10-12 00:00"));
+    search: for (let day = 0; day < 5; day++) for (let m = LAB_OPEN * 60; m * 60e3 + len <= LAB_CLOSE * HOUR; m += 30) {
+      place(monday + day * DAY + m * 60e3);
+      if (availability(d, "__new__")?.ok) break search;
+    }
+  }
+  return d;
+}
+/* the plan tab changed (or this tab came back to the front): show the new hours */
+window.addEventListener("storage", e => { if (e.key === PLAN_DRAFT_KEY && state.step === 1) render(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && state.step === 1) render(); });
 
 /* ---------- the booking form (new or edit) ---------- */
 function blankDraft() {
@@ -521,9 +598,9 @@ function bookingForm() {
   const f = state.form, d = f.draft, isNew = f.id === "__new__";
   const e = EQ[d.equipment_id];
   const byRoom = {};
-  for (const [id, q] of Object.entries(EQ)) if (q.bookable) (byRoom[q.room] ??= []).push([id, q]);
+  for (const [id, q] of Object.entries(EQ)) if (q.bookable && (LP.uses(id) || d.equipment_id === id)) (byRoom[q.room] ??= []).push([id, q]);
   const devOpts = Object.entries(byRoom).map(([room, list]) => `<optgroup label="${esc(LAB.rooms[room] ?? room)}">${
-    list.map(([id, q]) => `<option value="${id}" ${d.equipment_id === id ? "selected" : ""}>${esc(q.name)}</option>`).join("")}</optgroup>`).join("");
+    list.map(([id, q]) => `<option value="${id}" title="${esc(q.name)}" ${d.equipment_id === id ? "selected" : ""}>${esc(shortEq(id))}</option>`).join("")}</optgroup>`).join("");
   const days = []; for (let t = EPOCH; t < DATA_END; t += DAY) days.push(t);
   const times = []; for (let m = 0; m < 24*60; m += 30) times.push(`${String(m/60|0).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`);
   const dayOpts = sel => days.map(t => `<option value="${t}" ${t === +sel ? "selected" : ""}>${dayLabel(t)}</option>`).join("");
@@ -653,9 +730,14 @@ function viewReview() {
       <ul class="small">${state.serverErrors.map(e => `<li>${esc(e)}</li>`).join("")}</ul></details>` : "";
   return `<div class="stack">
     ${stale}${contract}${estimate}${breakdown}
-    <div class="spread" style="margin-top:22px"><h2>Options to lower it</h2><span class="muted">${SSET.suggestions.length} of max 3 · you decide</span></div>
+    <div class="spread" style="margin-top:22px"><h2>Options to lower it</h2><span class="row"><span class="muted">${SSET.suggestions.length} of max 3 · you decide</span>
+      ${aiAvailable() ? `<button class="btn primary" data-askai ${state.busy ? "disabled" : ""}>${state.busy && AI_BUSY ? "The AI is thinking… (~10 s)" : "Ask the AI"}</button>` : ""}</span></div>
+    ${SSET.generator ? `<details class="disclose small"><summary>${SSET.generator.proposer === "llm" ? `Chosen by the AI (${esc(SSET.generator.model)})` : "Chosen by fixed rules"} · how these are chosen</summary>
+      <p class="muted">${SSET.generator.proposer === "llm"
+        ? `The AI chose these among the options the rules allow; text by ${SSET.generator.phraser === "llm" ? "the AI" : SSET.generator.phraser === "mixed" ? "the AI, with some fixed templates" : "fixed templates"}.`
+        : `Fixed rules chose these; the text comes from templates.${aiAvailable() ? ' "Ask the AI" lets the AI choose among the same options and write them (it also reads your booking purposes).' : ""}`}
+        Every number comes from the calculator. Suggestions can be wrong: check the trade-off against what you know about your experiment. Nothing changes unless you choose it.</p></details>` : ""}
     ${mutedNote()}
-    <p class="muted small">These are generated automatically and can be wrong. Check the trade-off against what you know about your experiment. Nothing changes unless you choose it.</p>
     ${suggs}
       <details class="disclose small" id="d-share" style="max-width:640px;margin-top:18px"><summary>What's shared if you tick this?</summary>
         ${PLACEHOLDERS ? placeholder("what exactly is shared when you tick the box, where it goes, and what is never shared") : `
@@ -918,6 +1000,12 @@ function download(name, obj) {
 document.addEventListener("click", e => {
   const t = e.target.closest("button"); if (!t) return;
   const ds = t.dataset, ts = dayTs();
+  if ("teamlab" in ds) {
+    const box = $("#teamlab"), open = box.hidden;
+    box.hidden = !open; if (open) box.scrollIntoView({block: "nearest"});
+    $("#teamlabBtn").setAttribute("aria-expanded", String(open));
+    return;
+  }
   if ("about" in ds) {
     const box = $("#about"), open = box.hidden;
     box.hidden = !open; if (open) { box.innerHTML = viewAbout(); box.scrollIntoView({block: "nearest"}); }
@@ -928,13 +1016,20 @@ document.addEventListener("click", e => {
     state.undoDel = null;
     if (ds.go === "skip") { resetReview(); state.skipped = true; state.step = 3; bookLive(); }
     else if (ds.go === "restart") resetAll();
+    else if (ds.go === "demo") { SAVED_PLAN = null; resetAll(); }   // back to A1's demo request; nothing is written
     else if (ds.go === "3") { state.sent = buildEvents(); state.step = 3; if (LIVE && state.share && state.sent.length) saveLive(); bookLive(); }
-    else if (ds.go === "2" && LIVE && state.step === 1) return priceLive();
+    else if (ds.go === "2" && LIVE && state.step === 1) return priceLive(false);
     else state.step = +ds.go;
     return render();
   }
   /* plan screen */
+  if ("askai" in ds) { if (!state.busy) priceLive(true); return; }
   if ("new" in ds) { state.form = {id: "__new__", draft: blankDraft()}; render(); $("#f-eq")?.focus(); return; }
+  if (ds.bookplan) {
+    const line = planDraft()?.lines.find(l => l.line_id === ds.bookplan);
+    if (line) { state.form = {id: "__new__", draft: draftFromPlan(line)}; render(); $("#f-sday")?.focus(); }
+    return;
+  }
   if (ds.edit) { state.form = {id: ds.edit, draft: draftFrom(bk(ds.edit))}; render(); $("#f-eq")?.focus(); return; }
   if ("fcancel" in ds) { state.form = null; return render(); }
   if ("fsave" in ds) {
@@ -999,10 +1094,11 @@ async function api(path, body) {
   if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
   return j;
 }
-async function priceLive() {
+async function priceLive(ai = false) {   // the rules by default; the AI only when asked ("Ask the AI")
+  AI_BUSY = ai;
   state.busy = true; state.apiError = null; render();
   try {
-    const j = await api("/api/suggest", requestJson());
+    const j = await api("/api/suggest", {...requestJson(), use_llm: ai && !!aiAvailable(), provider: LLM_AV.ollama ? "ollama" : "claude"});
     MUTED = (await api("/api/health")).muted || [];
     SSET = j.suggestion_set; SSET.suggestions = SSET.suggestions.slice(0, 3); ANON_REQ = anonId();
     state.serverErrors = j.errors || []; state.pricedFor = sig(state.request);
@@ -1028,11 +1124,19 @@ async function saveLive() {
 }
 async function detectLive() {
   if (!location.protocol.startsWith("http")) return;
+  document.querySelector("[data-home]")?.removeAttribute("hidden");   // served: the start page exists
   try {
     const j = await api("/api/health");
-    LIVE = !!j.ok; MUTED = j.muted || [];
+    LIVE = !!j.ok; MUTED = j.muted || []; LLM_AV = j.llm || {};
     const plan = (await api("/api/plan")).bookings;
     if (plan?.length) { SAVED_PLAN = normalizePlan(plan); if (state.step === 1 && !state.form) resetAll(); }
+    try {
+      const labs = await api("/api/labs");
+      LP.mountEditor($("#teamlabEditor"), labs);
+      const btn = $("#teamlabBtn"), sync = () => { btn.textContent = LP.summary ? LP.summary(labs) : "Team & lab"; };
+      btn.hidden = false; sync();
+      LP.onChange(() => { sync(); render(); });
+    } catch { /* no labs endpoint: every device stays available */ }
     const m = $("#mode"); m.textContent = "live engine"; m.className = "chip good";
     m.title = "Connected to src/ui/serve.py: requests are priced by the real calculator and feedback is saved.";
     render();

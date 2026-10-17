@@ -9,7 +9,6 @@
       "request_id",
       "suggestion_id",
       "suggestion_type",
-      "equipment_id",
       "action",
       "timestamp"
    ],
@@ -29,11 +28,18 @@
          "enum": [
             "reschedule",
             "share",
-            "coordinate"
+            "coordinate",
+            "substitute",
+            "method",
+            "share_material"
          ]
       },
       "equipment_id": {
          "type": "string"
+      },
+      "item_id": {
+         "type": "string",
+         "description": "Plan suggestions: the item of the changed line (data/consumables.csv)"
       },
       "action": {
          "type": "string",
@@ -52,6 +58,7 @@
             "protocol_constraint",
             "not_available_then",
             "estimate_looks_wrong",
+            "not_equivalent_for_my_protocol",
             "other"
          ]
       },
@@ -68,5 +75,17 @@
          "type": "string",
          "description": "YYYY-MM-DD HH:MM"
       }
-   }
+   },
+   "oneOf": [
+      {
+         "required": [
+            "equipment_id"
+         ]
+      },
+      {
+         "required": [
+            "item_id"
+         ]
+      }
+   ]
 }

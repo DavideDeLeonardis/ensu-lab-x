@@ -68,6 +68,16 @@ class TestValidatorCatchesViolations(unittest.TestCase):
         self.assertTrue(errors_mentioning(gold_with(why="Group Cartilage & disc images right before you."), "names a group"))
         self.assertTrue(errors_mentioning(gold_with(why="B2 images right before you."), "names a researcher"))
 
+    def test_rule11_invented_number_in_text(self):
+        self.assertTrue(errors_mentioning(gold_with(why="Moving it saves about 5.0 kg CO₂e."), "rule 11"))
+        self.assertTrue(errors_mentioning(gold_with(why="Moving it saves 95% of the session."), "rule 11"))
+
+    def test_rule11_accepts_autoclave_loads(self):
+        """'a 45% load' is a data value (load_pct), not a saving: allowed."""
+        s1 = next(s for s in GOLD["suggestions"] if s["type"] == "coordinate")
+        self.assertIn("45%", s1["why"])
+        self.assertEqual(check_suggestion_set(GOLD), [])
+
     def test_rule8_below_threshold(self):
         doc = copy.deepcopy(GOLD)
         doc["suggestions"].append({**doc["suggestions"][1], "id": "S3",

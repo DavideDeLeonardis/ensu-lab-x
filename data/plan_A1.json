@@ -1,0 +1,73 @@
+{
+  "plan_id": "PLAN-2026-0042",
+  "title": "Valve scaffold seeding, week 42",
+  "notes": "Cells are sensitive to serum lot changes.",
+  "lines": [
+    {
+      "line_id": "L1",
+      "item_id": "TIP-10-F-RACK",
+      "quantity": 960,
+      "unit": "piece",
+      "requirements": [
+        "sterile"
+      ]
+    },
+    {
+      "line_id": "L2",
+      "item_id": "TUBE-50-SU",
+      "quantity": 40,
+      "unit": "piece",
+      "requirements": [
+        "sterile"
+      ]
+    },
+    {
+      "line_id": "L3",
+      "item_id": "PETRI-6-SU",
+      "quantity": 30,
+      "unit": "piece",
+      "requirements": [
+        "sterile"
+      ]
+    },
+    {
+      "line_id": "L4",
+      "item_id": "PETRI-6-SU",
+      "quantity": 20,
+      "unit": "piece",
+      "requirements": [
+        "sterile",
+        "tc_treated"
+      ]
+    },
+    {
+      "line_id": "L5",
+      "item_id": "PASTEUR-SU",
+      "quantity": 60,
+      "unit": "piece",
+      "requirements": [
+        "sterile"
+      ]
+    },
+    {
+      "line_id": "L6",
+      "item_id": "GLOVE-NITRILE",
+      "quantity": 100,
+      "unit": "piece"
+    },
+    {
+      "line_id": "L7",
+      "item_id": "BSC-1",
+      "quantity": 15,
+      "unit": "h"
+    },
+    {
+      "line_id": "L8",
+      "item_id": "BIO-1",
+      "quantity": 96,
+      "unit": "h",
+      "locked": true,
+      "lock_reason": "Protocol timing fixed; safety interlock"
+    }
+  ]
+}

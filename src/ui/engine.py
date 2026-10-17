@@ -60,8 +60,11 @@ def _with_request_rows(rows):
         validate.BOOKINGS.clear(); validate.BOOKINGS.update(saved["val"])
 
 
-def price_request(req):
-    """BookingRequest dict -> (SuggestionSet dict, list of validator errors)."""
+def price_request(req, llm=None):
+    """BookingRequest dict -> (SuggestionSet dict, list of validator errors).
+
+    `llm` (optional): an LLM client that picks among the allowed options and writes the text (src/ai/booking_ai.py).
+    The booking purposes go to it scrubbed, as untrusted text; group and researcher ids never do."""
     group, researcher = req.get("group", "A"), req.get("researcher", "A1")
     req_ids = {b["booking_id"] for b in req["bookings"]}
     # the researcher's original rows are replaced by the request (they may have been edited or removed)
@@ -83,6 +86,8 @@ def price_request(req):
             equipment_by_id=EQUIPMENT,
             calc=RealCalculator(),
             muted_pairs=muted_pairs(),  # rule 9, from data/feedback_log.json
+            llm=llm,
+            free_text="; ".join(r["purpose"] for r in rows if r["purpose"]),
         )
         errors = validate.check_suggestion_set(sset)
     return sset, errors

@@ -2,7 +2,7 @@
    "$schema": "https://json-schema.org/draft/2020-12/schema",
    "$id": "suggestion_set.schema.json",
    "title": "SuggestionSet",
-   "description": "What the AI layer returns for one booking request, and what the UI renders. All kg/kWh numbers must come from calculator.py.",
+   "description": "What the AI layer returns for one booking request or experiment plan, and what the UI renders. All kg/kWh numbers must come from the calculator.",
    "type": "object",
    "required": [
       "request_id",
@@ -14,7 +14,7 @@
    "properties": {
       "request_id": {
          "type": "string",
-         "description": "e.g. 'REQ-A1-2026-10-12'"
+         "description": "e.g. 'REQ-A1-2026-10-12' (booking request) or the plan_id (experiment plan)"
       },
       "booking_ids": {
          "type": "array",
@@ -34,10 +34,12 @@
          "additionalProperties": false,
          "properties": {
             "kwh": {
-               "type": "number"
+               "type": "number",
+               "description": "Secondary figure: kWh of the equipment involved. The headline metric is kg (CO2e)."
             },
             "kg": {
-               "$ref": "#/$defs/range"
+               "$ref": "#/$defs/range",
+               "description": "Total kg CO2e (embodied + electricity for plans)"
             },
             "hotspots": {
                "description": "Largest contributors, sorted by share, max 4.",
@@ -46,7 +48,6 @@
                "items": {
                   "type": "object",
                   "required": [
-                     "equipment_id",
                      "kg_typ",
                      "share_pct"
                   ],
@@ -54,6 +55,10 @@
                   "properties": {
                      "equipment_id": {
                         "type": "string"
+                     },
+                     "item_id": {
+                        "type": "string",
+                        "description": "Experiment plans: key into data/consumables.csv"
                      },
                      "kg_typ": {
                         "type": "number"
@@ -63,14 +68,69 @@
                      },
                      "locked": {
                         "type": "boolean",
-                        "description": "true if every booking on it has movable = no"
+                        "description": "true if every booking (or plan line) on it is fixed"
                      }
-                  }
+                  },
+                  "oneOf": [
+                     {
+                        "required": [
+                           "equipment_id"
+                        ]
+                     },
+                     {
+                        "required": [
+                           "item_id"
+                        ]
+                     }
+                  ]
                }
             },
             "locked_kg": {
                "type": "number",
-               "description": "kg CO2e in bookings with movable = no (out of the tool's reach)"
+               "description": "kg CO2e in bookings with movable = no or locked plan lines (out of the tool's reach)"
+            },
+            "breakdown": {
+               "description": "Experiment plans: kg CO2e split by source.",
+               "type": "object",
+               "required": [
+                  "embodied",
+                  "electricity"
+               ],
+               "additionalProperties": false,
+               "properties": {
+                  "embodied": {
+                     "$ref": "#/$defs/range"
+                  },
+                  "electricity": {
+                     "$ref": "#/$defs/range"
+                  }
+               }
+            },
+            "electricity": {
+               "description": "Experiment plans: the electricity factor used for equipment lines.",
+               "type": "object",
+               "required": [
+                  "basis",
+                  "g_per_kwh",
+                  "source"
+               ],
+               "additionalProperties": false,
+               "properties": {
+                  "basis": {
+                     "type": "string",
+                     "enum": [
+                        "location",
+                        "market"
+                     ]
+                  },
+                  "g_per_kwh": {
+                     "type": "number"
+                  },
+                  "source": {
+                     "type": "string",
+                     "description": "key into data/sources.csv"
+                  }
+               }
             }
          }
       },
@@ -88,7 +148,6 @@
          "items": {
             "type": "object",
             "required": [
-               "booking_id",
                "reason"
             ],
             "additionalProperties": false,
@@ -96,18 +155,83 @@
                "booking_id": {
                   "type": "string"
                },
+               "line_id": {
+                  "type": "string",
+                  "pattern": "^L\\d+$"
+               },
                "reason": {
                   "type": "string",
                   "enum": [
                      "hard_constraint",
                      "muted_by_user_feedback",
                      "saving_below_threshold",
-                     "disabled_by_lab_manager"
+                     "disabled_by_lab_manager",
+                     "requirement_conflict"
                   ]
                },
                "detail": {
                   "type": "string"
                }
+            },
+            "oneOf": [
+               {
+                  "required": [
+                     "booking_id"
+                  ]
+               },
+               {
+                  "required": [
+                     "line_id"
+                  ]
+               }
+            ]
+         }
+      },
+      "line_ids": {
+         "description": "Experiment plans only: the plan's line ids (mirror of booking_ids).",
+         "type": "array",
+         "items": {
+            "type": "string",
+            "pattern": "^L\\d+$"
+         }
+      },
+      "generator": {
+         "description": "Who proposed the suggestions and who wrote their text. Always set by the plan engine.",
+         "type": "object",
+         "required": [
+            "proposer",
+            "phraser"
+         ],
+         "additionalProperties": false,
+         "properties": {
+            "proposer": {
+               "type": "string",
+               "enum": [
+                  "llm",
+                  "rules"
+               ]
+            },
+            "phraser": {
+               "type": "string",
+               "enum": [
+                  "llm",
+                  "template",
+                  "mixed"
+               ]
+            },
+            "model": {
+               "type": [
+                  "string",
+                  "null"
+               ],
+               "description": "e.g. 'claude-haiku-5-5'; null when no LLM was used"
+            },
+            "prompt_version": {
+               "type": [
+                  "string",
+                  "null"
+               ],
+               "description": "e.g. 'proposer-v1/phraser-v1'"
             }
          }
       }
@@ -138,7 +262,6 @@
          "required": [
             "id",
             "type",
-            "booking_ids",
             "headline",
             "change",
             "saving_kg",
@@ -159,15 +282,27 @@
                "enum": [
                   "reschedule",
                   "share",
-                  "coordinate"
+                  "coordinate",
+                  "substitute",
+                  "method",
+                  "share_material"
                ],
-               "description": "reschedule = move in time to a cleaner grid hour; share = use a device already running / another unit; coordinate = merge or batch energy-intensive activities"
+               "description": "Bookings: reschedule = move in time to a cleaner grid hour; share = use a device already running / another unit; coordinate = merge or batch energy-intensive activities. Plans: substitute = another consumable (including a reusable one); method = an equivalent procedure; share_material = shared stock or run with another group. Plan types always come from data/equivalences.csv."
             },
             "booking_ids": {
                "type": "array",
                "minItems": 1,
                "items": {
                   "type": "string"
+               }
+            },
+            "line_ids": {
+               "type": "array",
+               "minItems": 1,
+               "maxItems": 1,
+               "items": {
+                  "type": "string",
+                  "pattern": "^L\\d+$"
                }
             },
             "headline": {
@@ -192,6 +327,23 @@
                   },
                   "merge_into_booking_id": {
                      "type": "string"
+                  },
+                  "line_id": {
+                     "type": "string",
+                     "pattern": "^L\\d+$"
+                  },
+                  "equivalence_id": {
+                     "type": "string",
+                     "pattern": "^EQ-\\d{3}$",
+                     "description": "row of data/equivalences.csv"
+                  },
+                  "alternative_id": {
+                     "type": "string",
+                     "description": "key into data/consumables.csv"
+                  },
+                  "new_quantity": {
+                     "type": "number",
+                     "description": "quantity × ratio of the equivalence, computed by code"
                   }
                }
             },
@@ -218,13 +370,29 @@
                   "medium",
                   "high"
                ],
-               "description": "Lowest confidence among the equipment values involved (estimate → low, derived → medium, measured → high)"
+               "description": "Lowest confidence among the equipment values or emission factors involved (estimate → low, derived → medium, measured → high)"
             },
             "needs_other_party": {
                "type": "boolean",
                "description": "true if another group must agree (e.g. merging autoclave cycles). The other group is never named to the researcher."
+            },
+            "requires_validation": {
+               "type": "boolean",
+               "description": "Plans: the lab must validate the change for the protocol first (from data/equivalences.csv)."
             }
-         }
+         },
+         "oneOf": [
+            {
+               "required": [
+                  "booking_ids"
+               ]
+            },
+            {
+               "required": [
+                  "line_ids"
+               ]
+            }
+         ]
       }
    }
 }

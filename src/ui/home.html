@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab X assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Start page served by src/ui/serve.py at "/": choose the experiment plan assistant or the booking assistant. -->
+<style>
+:root{
+  --ground:#EDF1F0; --surface:#FFFFFF; --ink:#13201D; --muted:#5A6A66; --line:#D2DBD8;
+  --accent:#1E5BB8; --accent-soft:#DCE7F7; --good:#2F7D55; --good-soft:#DDEFE5;
+  --shadow:0 1px 2px rgba(19,32,29,.06),0 4px 16px rgba(19,32,29,.05);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--ground:#0E1513; --surface:#161F1D; --ink:#E3ECE9; --muted:#95A6A1; --line:#2B3835;
+        --accent:#7AA7F0; --accent-soft:#1F3150; --good:#5FC08D; --good-soft:#18332A;
+        --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0}
+h1,h2{font-family:var(--cond);font-weight:600;margin:0}
+h1{font-size:26px} h2{font-size:19px}
+p{margin:0}
+.wrap{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+.eyebrow{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:22px}
+a.card{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:inherit;background:var(--surface);
+  border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:20px}
+a.card:hover{border-color:var(--accent)}
+a.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chip{align-self:flex-start;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px}
+.chip.new{color:var(--good);background:var(--good-soft)}
+.chip.old{color:var(--accent);background:var(--accent-soft)}
+ul{margin:0;padding-left:18px} li+li{margin-top:4px}
+.go{margin-top:auto;font-weight:600;color:var(--accent)}
+.foot{margin-top:26px;font-size:13px}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="eyebrow">Lab X · TU/e Sustainability Self-Assessment</div>
+  <h1>Lab CO₂ assistant</h1>
+  <p class="muted" style="margin-top:6px">Estimates the CO₂ of lab work and suggests at most 3 alternatives.
+    You always decide: nothing changes unless you accept.</p>
+
+  <div class="grid">
+    <a class="card" href="/plan">
+      <span class="chip new">recommended</span>
+      <h2>Plan an experiment</h2>
+      <p class="muted">Choose your lab and the equipment you use, list what the experiment needs (plastics,
+        gloves, machine hours), and see its CO₂ and greener swaps approved by lab experts.</p>
+      <ul class="muted"><li>Covers consumables, where most lab emissions come from</li>
+        <li>An AI can choose and explain the swaps; a calculator makes every number</li></ul>
+      <span class="go">Open the plan assistant →</span>
+    </a>
+    <a class="card" href="/bookings">
+      <span class="chip old">first prototype</span>
+      <h2>Book equipment</h2>
+      <p class="muted">Book sessions on lab equipment and see if moving them to a cleaner hour of the
+        electricity grid, sharing a device or joining a run would lower their CO₂.</p>
+      <ul class="muted"><li>Electricity only (TU/e buys green electricity, so savings are small)</li>
+        <li>Optional AI: it chooses among the moves the rules allow</li></ul>
+      <span class="go">Open the booking assistant →</span>
+    </a>
+  </div>
+
+  <p class="foot muted">No name or research group is stored. Feedback is shared only if you opt in, at lab level.
+    Lab X is a fictional lab modelled on TU/e's Laboratory for Cell &amp; Tissue Engineering.</p>
+</main>
+</body>
+</html>

@@ -1,9 +1,15 @@
 """Run the UI against the real engine: python3 src/ui/serve.py  → http://127.0.0.1:8000
 
-Standard library only. The page (built fresh from app_template.html on every load) talks to:
+One app, two assistants. The start page (home.html) lets the researcher choose:
+    GET  /            start page
+    GET  /plan        experiment plan assistant (plan.html; API in plan_api.py, under /api/plan/...)
+    GET  /bookings    booking assistant (built fresh from app_template.html on every load)
+Both pages share the team's lab profile (profile.js, GET /api/labs), kept only in the browser.
 
-    GET  /api/health     {"ok": true, "muted": [[type, equipment_id], ...]}
-    POST /api/suggest    BookingRequest  → {"suggestion_set": {...}, "errors": [...]}
+Standard library only. The booking page talks to:
+
+    GET  /api/health     {"ok": true, "muted": [[type, equipment_id], ...], "llm": {"ollama": bool, "claude": bool}}
+    POST /api/suggest    BookingRequest (+ "use_llm", "provider") → {"suggestion_set": {...}, "errors": [...]}
     POST /api/feedback   [FeedbackEvent] → {"saved": [...]}      (appends to data/feedback_log.json)
     GET  /api/plan       {"bookings": [...] | null}             (last confirmed plan)
     POST /api/book       BookingRequest  → {"saved": [...]}     (writes data/confirmed_bookings.csv)
@@ -19,11 +25,15 @@ import json
 import sys
 import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlsplit
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from src.ui.build import build_html  # noqa: E402
 from src.ui.engine import price_request, save_feedback, muted_pairs, load_plan, save_plan, reset_demo  # noqa: E402
+from src.ui import plan_api  # noqa: E402
+
+HOME = Path(__file__).with_name("home.html")
 
 MAX_BODY = 256 * 1024
 PLACEHOLDERS = False  # set by --placeholders
@@ -46,11 +56,23 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(n) or b"null")
 
     def do_GET(self):
-        if self.path in ("/", "/index.html"):
+        self.path = urlsplit(self.path).path   # "/plan?values=1" is "/plan"
+        if self.path == "/":
+            return self._send(200, HOME.read_bytes(), "text/html")
+        if self.path in ("/bookings", "/index.html"):
             html, _ = build_html(placeholders=PLACEHOLDERS)
             return self._send(200, html.encode(), "text/html")
+        if self.path == "/plan":
+            return self._send(200, plan_api.PAGE.read_bytes(), "text/html")
+        if self.path == "/profile.js":
+            return self._send(200, plan_api.PROFILE_JS.read_bytes(), "text/javascript")
+        if self.path == "/api/labs":
+            return self._send(200, plan_api.labs())
+        if self.path == "/api/plan/catalog":
+            return self._send(200, plan_api.catalog())
         if self.path == "/api/health":
-            return self._send(200, {"ok": True, "muted": sorted(map(list, muted_pairs()))})
+            return self._send(200, {"ok": True, "muted": sorted(map(list, muted_pairs())),
+                                    "llm": plan_api.llm_status()})
         if self.path == "/api/plan":
             return self._send(200, {"bookings": load_plan()})
         self._send(404, {"error": "not found"})
@@ -58,8 +80,18 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             body = self._json_body()
+            if self.path == "/api/plan/suggest":
+                return self._send(*plan_api.suggest(body or {}))
+            if self.path == "/api/plan/feedback":
+                if not isinstance(body, list):
+                    return self._send(400, {"error": "expected a list of FeedbackEvents"})
+                return self._send(200, {"saved": plan_api.save_feedback(body)})
             if self.path == "/api/suggest":
-                sset, errors = price_request(body)
+                llm = None
+                if body.get("use_llm"):   # optional AI for bookings too (src/ai/booking_ai.py)
+                    from src.ai.llm.providers import get_llm
+                    llm = get_llm(body.get("provider") if body.get("provider") in ("ollama", "claude") else None)
+                sset, errors = price_request(body, llm=llm)
                 return self._send(200, {"suggestion_set": sset, "errors": errors})
             if self.path == "/api/feedback":
                 if not isinstance(body, list):
@@ -92,7 +124,9 @@ def main():
         reset_demo()
         print("Demo reset: confirmed plan deleted, feedback log emptied.")
     srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    print(f"Lab X booking assistant: http://127.0.0.1:{args.port}   (Ctrl+C to stop)")
+    st = plan_api.llm_status()
+    ai = "AI: " + ", ".join(k for k, v in st.items() if v) if any(st.values()) else "no AI: rules + templates"
+    print(f"Lab X assistant: http://127.0.0.1:{args.port}   (plan + bookings; {ai}; Ctrl+C to stop)")
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

@@ -119,15 +119,6 @@ def lowest_confidence_label(equipment: list[Equipment]) -> str:
 DATA = Path(__file__).resolve().parents[2] / "data"
 
 
-def load_bookings_csv(path: Optional[Path] = None) -> dict[str, Booking]:
-    path = path or (DATA / "bookings.csv")
-    out = {}
-    with open(path) as f:
-        for row in csv.DictReader(f):
-            out[row["booking_id"]] = Booking.from_row(row)
-    return out
-
-
 def _csv_bool(v: Optional[str]) -> Optional[bool]:
     if v is None or v == "":
         return None

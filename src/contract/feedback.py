@@ -31,7 +31,8 @@ def append_event(event, path=LOG):
 
 
 def muted_pairs(events=None, threshold=MUTE_AFTER_REJECTS):
-    """(suggestion_type, equipment_id) pairs rejected at least `threshold` times."""
+    """(suggestion_type, equipment_id or item_id) pairs rejected at least `threshold` times."""
     events = load_events() if events is None else events
-    rejects = Counter((e["suggestion_type"], e["equipment_id"]) for e in events if e["action"] == "reject")
+    rejects = Counter((e["suggestion_type"], e.get("equipment_id") or e.get("item_id"))
+                      for e in events if e["action"] == "reject")
     return {pair for pair, n in rejects.items() if n >= threshold}

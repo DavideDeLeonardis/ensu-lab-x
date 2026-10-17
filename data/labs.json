@@ -1,0 +1,33 @@
+[
+  {
+    "lab_id": "LABX",
+    "name": "Lab X: cell & tissue culture (fictional)",
+    "based_on": "TUE_LCTE",
+    "note": "Modelled on TU/e's Laboratory for Cell & Tissue Engineering",
+    "rooms": [
+      "culture",
+      "cold",
+      "micro",
+      "testing",
+      "prep"
+    ],
+    "equipment": [
+      "ULT-1",
+      "ULT-2",
+      "INC-1",
+      "INC-2",
+      "INC-3",
+      "SHK-1",
+      "BSC-1",
+      "BSC-2",
+      "CEN-1",
+      "HB-1",
+      "WB-1",
+      "CONF-1",
+      "FLU-1",
+      "BIO-1",
+      "AUT-1",
+      "FH-1"
+    ]
+  }
+]
