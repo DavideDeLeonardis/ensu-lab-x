@@ -215,7 +215,7 @@ pre{font-family:var(--mono);font-size:12px;background:var(--sunk);border-radius:
   <details class="disclose" style="margin-top:32px">
     <summary>Developer: load another SuggestionSet</summary>
     <div class="stack" style="margin-top:10px">
-      <p class="muted">Pick a file from the AI layer (or from <code>src/ui/price_request.py</code>) to see how it renders. The page checks it against the contract and warns about anything the UI would have to work around.</p>
+      <p class="muted">Pick a SuggestionSet file to see how it renders. The page checks it against the contract and warns about anything the UI would have to work around.</p>
       <input type="file" id="loader" accept="application/json,.json">
       <div id="loadmsg"></div>
     </div>
@@ -491,8 +491,7 @@ function viewPlan() {
     ${state.form && state.form.id !== "__new__" ? bookingForm() : ""}
     ${state.apiError ? `<div class="warnbox" role="alert">Couldn't reach the engine: ${esc(state.apiError)}</div>` : ""}
     ${dirty && !LIVE ? `<div class="banner stack">
-      <p><strong>Your request changed since the last estimate.</strong> In the real tool it's re-priced automatically. In this prototype, run it through the calculator yourself:</p>
-      <p class="small">1. <button class="btn link" data-dlreq>Download request.json</button> &nbsp; 2. <code>python3 src/ui/price_request.py request.json -o mine.json</code> &nbsp; 3. Load <code>mine.json</code> under "Developer" at the bottom.</p>
+      <p><strong>Your request changed since the last estimate.</strong> In the real tool it's re-priced automatically. Start <code>python3 src/ui/serve.py</code> and open the page from it to re-price it.</p>
     </div>` : ""}
     <div class="sticky row" style="justify-content:flex-end">
       <button class="btn" data-go="skip" ${state.request.length ? "" : "disabled"}>Book without checking</button>
@@ -688,7 +687,6 @@ function viewReview() {
 
   const stale = isDirty() ? `<div class="banner stack">
       <p><strong>This estimate is for an earlier version of your request.</strong> You added, edited or removed bookings, so the numbers and suggestions below may not match. In the real tool this is re-priced automatically.</p>
-      <p class="small"><button class="btn link" data-dlreq>Download request.json</button> → <code>python3 src/ui/price_request.py request.json -o mine.json</code> → load it under "Developer".</p>
     </div>` : "";
 
   const estimate = `<section class="card stack" aria-labelledby="est-h">

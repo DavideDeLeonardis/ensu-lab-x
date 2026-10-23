@@ -1,17 +1,9 @@
-"""Build src/ui/index.html from src/ui/app_template.html.
+"""Build the booking page from src/ui/app_template.html (serve.py calls build_html on every request).
 
-Injects two things so the page works when opened straight from disk (no server, no fetch):
-  1. a SuggestionSet   (default: contract/examples/A1_suggestion_set_from_ai_layer.json, the real AI output)
-  2. a slim lab lookup (equipment names, the request's bookings, grid curve)
-
-Only what the UI needs is embedded. Other groups' bookings are reduced to times + load:
+Injects a SuggestionSet (default: contract/examples/A1_suggestion_set_from_ai_layer.json) and a slim lab lookup
+(equipment names, the request's bookings, grid curve). Other groups' bookings are reduced to times + load:
 no group, researcher or purpose (CONTRACT.md rule 7).
-
-Usage (from the repo root):
-    python3 src/ui/build.py
-    python3 src/ui/build.py --suggestions path/to/ai_output.json
 """
-import argparse
 import json
 from pathlib import Path
 
@@ -64,18 +56,3 @@ def build_html(suggestions_path=DEFAULT_SUGGESTIONS, placeholders=False):
     }
     return (UI / "app_template.html").read_text().replace(
         "/*__DATA__*/null", json.dumps(payload, ensure_ascii=False)), sset
-
-
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--suggestions", default=str(DEFAULT_SUGGESTIONS))
-    ap.add_argument("--placeholders", action="store_true",
-                    help="explanation panels open but say 'to be filled in' (for the demo)")
-    args = ap.parse_args()
-    html, sset = build_html(args.suggestions, placeholders=args.placeholders)
-    (UI / "index.html").write_text(html)
-    print(f"wrote {UI / 'index.html'}  ({len(html) // 1024} KB, {len(sset.get('suggestions', []))} suggestions)")
-
-
-if __name__ == "__main__":
-    main()

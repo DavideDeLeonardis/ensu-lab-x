@@ -2,7 +2,7 @@
 Claude API client for the plan engine.
 
     from src.ai.llm.anthropic_client import AnthropicClient
-    llm = AnthropicClient()          # ANTHROPIC_API_KEY if set, else the team key (team_key.py)
+    llm = AnthropicClient()          # reads ANTHROPIC_API_KEY from the environment (never from a file)
 
 Model: Claude Haiku 5.5, the smallest current model ($0.10 / $0.50 per million input / output tokens for
 prompts up to 100K tokens, checked 2026-10-15), at effort "low" to keep the footprint small. Haiku 5.5
@@ -27,8 +27,7 @@ class AnthropicClient:
         self.effort = effort
         if sdk_client is None:
             import anthropic  # imported here so the rest of the repo (and the tests) run without the SDK
-            from .team_key import api_key
-            sdk_client = anthropic.Anthropic(api_key=api_key(), timeout=timeout, max_retries=max_retries)
+            sdk_client = anthropic.Anthropic(timeout=timeout, max_retries=max_retries)
         self._sdk = sdk_client
 
     def complete_json(self, system: str, user: str, schema: dict, max_tokens: int) -> LLMResult:

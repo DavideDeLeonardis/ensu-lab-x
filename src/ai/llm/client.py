@@ -1,6 +1,6 @@
 """
 The LLM interface the plan engine depends on. Two implementations:
-  - anthropic_client.AnthropicClient: the real Claude API (network; key from ANTHROPIC_API_KEY or team_key.py)
+  - anthropic_client.AnthropicClient: the real Claude API (network, needs ANTHROPIC_API_KEY)
   - fake.FakeLLM: scripted answers for tests (no network)
 
 An LLM here only ever returns JSON constrained by a schema. It never returns kg or kWh:

@@ -1,5 +1,5 @@
 """
-Which LLM to use: "ollama" (local, free) or "claude" (Claude API: ANTHROPIC_API_KEY, else the team key in team_key.py).
+Which LLM to use: "ollama" (local, free) or "claude" (Claude API, needs ANTHROPIC_API_KEY).
 
     from src.ai.llm.providers import get_llm, available
     available()          # {"ollama": True, "claude": False}
@@ -9,15 +9,13 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from .team_key import api_key
-
 PREFERENCE = ("ollama", "claude")
 
 
 def available() -> dict[str, bool]:
     from .ollama_client import is_available
     return {"ollama": is_available(),
-            "claude": bool(api_key() or os.environ.get("ANTHROPIC_AUTH_TOKEN"))}
+            "claude": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))}
 
 
 def get_llm(name: Optional[str] = None):

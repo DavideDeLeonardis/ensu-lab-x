@@ -279,7 +279,7 @@ def main(argv=None):
             from src.ai.llm.providers import get_llm
             llm = get_llm("claude")
             if llm is None:
-                sys.exit("No Claude client: no key in team_key.py or ANTHROPIC_API_KEY.")
+                sys.exit("No Claude client: export ANTHROPIC_API_KEY first.")
         out["ai"] = ai_report(llm, runs=args.runs, basis=args.basis)
         print_ai(out["ai"])
     if args.save:

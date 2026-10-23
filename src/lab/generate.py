@@ -7,7 +7,7 @@ from published sources where available (see `source` / `confidence` columns);
 the booking calendar and the hourly grid profile are synthetic.
 
 Run (from the repo root):  python3 src/lab/generate.py
-Out:  data/*.csv, data/lab_data.json, explorer/lab.html (built from explorer/lab_template.html)
+Out:  data/*.csv, data/*.json
 """
 
 import csv
@@ -22,7 +22,6 @@ random.seed(SEED)
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data"
-EXPLORER = ROOT / "explorer"
 DATA.mkdir(exist_ok=True)
 
 EPOCH = datetime(2026, 10, 5)  # Monday; data covers 2 weeks (5-18 Oct 2026)
@@ -573,11 +572,6 @@ payload = dict(epoch=EPOCH.strftime("%Y-%m-%d"), days=DAYS, grid=grid, equipment
                rooms=ROOMS, groups=GROUPS, bookings=bookings, sources=SOURCES,
                consumables=CONSUMABLES, equivalences=EQUIVALENCES)
 (DATA / "lab_data.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1))
-
-tpl = EXPLORER / "lab_template.html"
-if tpl.exists():
-    html = tpl.read_text().replace("/*__DATA__*/null", json.dumps(payload, ensure_ascii=False))
-    (EXPLORER / "lab.html").write_text(html)
 
 scen = [b for b in bookings if b["scenario"]]
 print(f"{len(bookings)} bookings ({len(scen)} in scenario), grid mean {sum(grid)/len(grid):.0f} g/kWh")

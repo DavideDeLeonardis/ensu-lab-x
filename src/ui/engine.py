@@ -7,7 +7,7 @@ src/contract/feedback.append_event.
     saved = save_feedback(events)                 # FeedbackEvents -> data/feedback_log.json
     rows = save_plan(req)                         # confirmed plan -> data/confirmed_bookings.csv
 
-Used by src/ui/serve.py (live prototype) and src/ui/price_request.py (command line).
+Used by src/ui/serve.py.
 
 BookingRequest (proposed for CONTRACT.md §1):
     {"request_id": "REQ-A1-2026-10-12", "group": "A", "researcher": "A1",

@@ -4,7 +4,7 @@ Runs the plan engine on the demo experiment plan (data/plan_A1.json) and prints 
     python3 plan_demo.py                    # rules + templates, no network
     python3 plan_demo.py --llm              # an LLM proposes and phrases: local Ollama if running, else Claude
     python3 plan_demo.py --llm ollama       # local Qwen2.5 3B (needs `ollama serve` + `ollama pull qwen2.5:3b`)
-    python3 plan_demo.py --llm claude       # Claude Haiku 5.5 (team key or ANTHROPIC_API_KEY)
+    python3 plan_demo.py --llm claude       # Claude Haiku 5.5 (needs ANTHROPIC_API_KEY)
     python3 plan_demo.py --basis market     # electricity factor of the green contract
     python3 plan_demo.py --save             # also write contract/examples/A1_plan_suggestion_set.json
     python3 plan_demo.py --show-prompts     # dry run: the exact prompts an LLM run would send (no key needed)
